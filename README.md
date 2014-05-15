@@ -4,6 +4,13 @@ MySQL-Obejct-Model
 A PHP Object Model using MySQL as backend via Mysqli. Allows fast scaffoling of Models with a high performance MySQL specific backend.
 First version will be available soon, then more information regarding installation, use and namespacing will follow.
 
+### Version - Alpha Testing
+This project is currently begin used in small projects by myself, and is far from production ready / stable.
+Use at own RISK.
+
+### Usage
+Comming soon
+
 ### MOMBase.class.php
 The generic / factory class which all object models extends from. This contains generic query function and requires that extending classes implements needed methods.
 
