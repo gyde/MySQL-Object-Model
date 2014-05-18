@@ -1,8 +1,8 @@
 <?php
 /*NAMESPACE*/
 
-use MOMBaseException as BaseException;
-use MOMMySQLException as MySQLException;
+use /*USE_NAMESPACE*/MOMBaseException as BaseException;
+use /*USE_NAMESPACE*/MOMMySQLException as MySQLException;
 
 abstract class MOMBase
 {
@@ -327,7 +327,7 @@ abstract class MOMBase
 	  * @return mixed mysqli_result or TRUE
 	  * @throws MySQLException
 	  */
-	protected static function queryStatic($sql, $resultmode = \MYSQLI_USE_RESULT)
+	protected static function queryStatic($sql, $resultmode = \MYSQLI_STORE_RESULT)
 	{
 		return self::query(self::getConnection(), $sql, $resultmode);
 	}
@@ -339,7 +339,7 @@ abstract class MOMBase
 	  * @return mixed mysqli_result or TRUE
 	  * @throws MySQLuException
 	  */
-	protected function queryObject($sql, $resultmode = \MYSQLI_USE_RESULT)
+	protected function queryObject($sql, $resultmode = \MYSQLI_STORE_RESULT)
 	{
 		return self::query($this->__mbConnection, $sql, $resultmode);
 	}
