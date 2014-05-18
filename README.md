@@ -20,10 +20,13 @@ A simple scaffoling class for MySQL PRIMARY KEY tables
 ### Tests (PHPUnit)
 Tests has been designed using PHPUnit and will create and dropped tables as needed. 
 Inorder to run the tests, the following needs to be satisfied:
+
+
 1. A running mysql server
 2. A database with user and password (test tables will be CREATED and DROPPED here)
 3. An install of PHPUnit
 4. Setting environment variables for database, user and password
+
 
 ```sh
 export MYSQLI_HOST="YOUR_HOST"
@@ -34,4 +37,6 @@ phpunit --bootstrap autoload.php tests/MOMSimpleTest.class.php
 ```
 
 ### Tools 
-Comming soon
+#### build_mom 
+Shell script to "build" MOM using first providede argument as namespace.
+Will be placed in a folder called build

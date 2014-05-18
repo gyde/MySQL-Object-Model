@@ -1,0 +1,16 @@
+#!/bin/sh
+if [ $# -eq 0 ]; then
+	echo "Please provide your namespace, remember to escape backslash like so: \\\\\\\\\\\\\\"
+	exit 1
+fi
+
+if [ -z $1 ]; then
+	echo "Please provide a valid namespace, remember to escape backslash like so: \\\\\\\\\\\\\\"
+	exit 1
+fi
+
+echo "Building MySQL-Object-Model with namespace: $1"
+
+for a in MOM*.class.php; do
+	sed 's/\/\*NAMESPACE\*\//namespace '$1';/g' $a | sed 's/\/\*USE_NAMESPACE\*\//'$1'\\/g' > build/$a
+done
