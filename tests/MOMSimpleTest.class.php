@@ -14,15 +14,16 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		{
 			$sql = 
 				'CREATE TABLE '.MOMSimpleActual::DB.'.'.MOMSimpleActual::TABLE.' ('.
-				' '.MOMSimpleActual::COLUMN_PRIMARY_KEY.' INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
-				', '.MOMSimpleActual::COLUMN_DEFAULT_VALUE.' ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
-				', '.MOMSimpleActual::COLUMN_UPDATED.' TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
+				' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
+				', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
+				', `'.MOMSimpleActual::COLUMN_UPDATED.'` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
+				', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 				') ENGINE = MYISAM';
 
 			$res = self::$connection->query($sql);
 			if ($res !== FALSE)
 			{
-				MOMSimpleActual::setConnection(self::$connection);
+				\MOMBase::setConnection(self::$connection, TRUE);
 			}
 			else
 			{
@@ -55,6 +56,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 	public function testSave()
 	{
 		$object1 = new MOMSimpleActual(self::$connection);
+		$object1->unique = uniqid();
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
 
@@ -63,6 +65,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$object3 = new MOMSimpleActual(self::$connection);
 		$object3->state = 'SET';
+		$object3->unique = uniqid();
 		$object3->save();
 
 		$this->assertNotEquals($object2, $object3);
@@ -85,12 +88,25 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 	{
 		$object1 = new MOMSimpleActual(self::$connection);
 		$object1->state = MOMSimpleActual::STATE_GO;
+		$object1->unique = uniqid();
 		$object1->save();
 
 		$object2 = clone $object1;
+		$object2->unique = uniqid();
 		$object2->save();
 
 		$this->assertNotEquals($object1, $object2);
+	}
+
+	public function testUnique()
+	{
+		$object1 = new MOMSimpleActual(self::$connection);
+		$object1->unique = uniqid();
+		$object1->save();
+
+		$object2 = MOMSimpleActual::getByUnique($object1->unique);
+
+		$this->assertEquals($object1, $object2);
 	}
 }
 ?>

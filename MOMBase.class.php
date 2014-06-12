@@ -101,6 +101,37 @@ abstract class MOMBase
 	  * @return string
 	  */
 	abstract public static function getRowIdentifier($row);
+
+	/**
+	  * Get one object
+	  * @param string $where MySQL where clause
+	  * @param string $order MySQL order clause
+	  * @return object
+	  * @throws \util\DatabaseException
+	  */
+	public static function getOne ($where = NULL, $order = NULL)
+	{
+		$new = NULL;
+
+		$sql = 'SELECT * FROM `'.static::DB.'`.`'.static::TABLE.'`';
+
+		if ($where)
+			$sql .= ' WHERE '.$where;
+
+		if ($order)
+			$sql .= ' ORDER BY '.$order;
+
+		$sql .= ' LIMIT 1';
+
+		$res = self::queryStatic($sql);
+		if (($row = $res->fetch_assoc()) !== NULL)
+		{
+			$new = new static();
+			$new->fillByStatic($row);
+		}
+
+		return $new;
+	}
 	
 	/**
 	  * Get all objects
