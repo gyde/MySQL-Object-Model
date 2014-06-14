@@ -1,8 +1,8 @@
 <?php
 /*NAMESPACE*/
 
-use MOMBaseException as BaseException;
-use MOMMySQLException as MySqlException;
+use /*USE_NAMESPACE*/MOMBaseException as BaseException;
+use /*USE_NAMESPACE*/MOMMySQLException as MySqlException;
 
 class MOMSimple extends MOMBase
 {
