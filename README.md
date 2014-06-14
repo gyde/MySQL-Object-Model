@@ -24,7 +24,7 @@ Inorder to run the tests, the following needs to be satisfied:
 
 1. A running mysql server
 2. A database with user and password (test tables will be CREATED and DROPPED here)
-3. An install of PHPUnit
+3. An installation of PHPUnit
 4. Setting environment variables for database, user and password
 
 
