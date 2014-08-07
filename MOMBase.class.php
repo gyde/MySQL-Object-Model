@@ -423,7 +423,7 @@ abstract class MOMBase
 		$str = 'Instance of '.$class.':'."\n";
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$str .= $field['Field'].': '.var_export($this->$field['Field'])."\n";
+			$str .= $field['Field'].': '.var_export($this->$field['Field'], TRUE)."\n";
 		}
 
 		return $str;
