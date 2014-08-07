@@ -12,13 +12,13 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
 		if (self::$connection !== FALSE && self::$connection->connect_errno == 0)
 		{
-			$sql = 
+			$sql =
 				'CREATE TABLE '.MOMSimpleActual::DB.'.'.MOMSimpleActual::TABLE.' ('.
 				' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 				', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 				', `'.MOMSimpleActual::COLUMN_UPDATED.'` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 				', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
-				') ENGINE = MYISAM';
+				') ENGINE = MYISAM;';
 
 			$res = self::$connection->query($sql);
 			if ($res !== FALSE)
@@ -27,6 +27,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 			}
 			else
 			{
+				self::$skipTestsMessage = self::$connection->error;
 				self::$skipTests = TRUE;
 			}
 
@@ -50,7 +51,10 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 	public function setUp()
 	{
 		if (self::$skipTests)
+		{
+			echo("\n".self::$skipTestsMessage."\n");
 			$this->markTestSkipped(self::$skipTestsMessage);
+		}
 	}
 
 	public function testSave()
@@ -79,8 +83,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	public function testGetAllByWhere()
 	{
-		$where = '`'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` = '.MOMSimpleActual::escapeStatic(MOMSimpleActual::STATE_SET);
-		$objects = MOMSimpleActual::getAllByWhere($where);
+		$objects = MOMSimpleActual::getByState(MOMSimpleActual::STATE_SET);
 		$this->assertEquals(1, count($objects));
 	}
 

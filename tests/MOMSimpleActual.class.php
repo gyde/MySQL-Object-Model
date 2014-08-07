@@ -20,4 +20,10 @@ class MOMSimpleActual extends \MOMSimple
 		$where = '`'.self::COLUMN_UNIQUE.'` = '.self::escapeStatic($unique);
 		return self::getOne($where);
 	}
+
+	public static function getByState($state)
+	{
+		$where = '`'.self::COLUMN_DEFAULT_VALUE.'` = '.self::escapeStatic($state);
+		return self::getAllByWhere($where);
+	}
 }
