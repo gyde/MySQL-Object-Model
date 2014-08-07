@@ -9,6 +9,10 @@ if [ -z $1 ]; then
 	exit 1
 fi
 
+if [ ! -d "build" ]; then
+	mkdir build;
+fi
+
 echo "Building MySQL-Object-Model with namespace: $1"
 
 for a in MOM*.class.php; do
