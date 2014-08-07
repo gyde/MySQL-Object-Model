@@ -3,7 +3,7 @@ namespace /*NAMESPACE_SLASH*/tests;
 
 class MOMSimpleActual extends \MOMSimple
 {
-	const DB = 'mysql_object_model';
+	const DB = 'mom';
 	const TABLE = 'mom_simple_test';
 
 	const COLUMN_PRIMARY_KEY = 'primary_key';

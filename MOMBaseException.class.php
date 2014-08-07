@@ -1,7 +1,7 @@
 <?php
 /*NAMESPACE*/
 
-class MOMBaseException extends \Exception
+class MOMBaseException extends MOMException
 {
 	/**
 	  * EXCEPTION CONSTANTS BEGIN
