@@ -21,13 +21,11 @@ class MOMBaseException extends MOMException
 	const PRIMARY_KEY_NOT_DEFINED = 4;
 	const MESSAGE_4 = 'Missing primary key definition, please define const COLUMN_PRIMARY_KEY in extending class';
 
-	/** Future use with MOMCompound
 	const COMPOUND_KEYS_NOT_DEFINED = 5;
 	const MESSAGE_5 = 'Missing compound key defition, please define const COLUMN_COMPOUND_KEYS in extending class';
 
 	const COMPOUND_KEYS_NOT_COMPOUND = 6;
 	const MESSAGE_6 = 'Whend defining compound key definition with const COLUMN_COMPOUND_KEYS, please define a mininum if two keys in extending class';
-	*/
 
 	const OBJECT_NOT_SAVED = 100;
 	const MESSAGE_100 = 'Object could not be saved (created/updated)'; 

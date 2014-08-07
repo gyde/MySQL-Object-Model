@@ -392,12 +392,27 @@ abstract class MOMBase
 	}
 
 	/**
+	  * Escape object value
+	  * Everything is escaped as strings except for NULL
+	  * TODO Optimize for int and other
+	  * @param string $field 
+	  * @return string
+	  */
+	protected function escapeObjectPair($field)
+	{
+		if ($this->$field !== NULL)
+			return '`'.$field.'` = '.$this->escapeObject($this->$field);
+		else
+			return '`'.$field.'` = NULL';
+	}
+
+	/**
 	  * Escape a value using static mysqli connection
 	  * @param string $value
 	  * @param bool $quote wrap value in single quote
 	  * @return string
 	  */
-	public static function escapeStatic($value, $quote = TRUE)
+	protected static function escapeStatic($value, $quote = TRUE)
 	{
 		return self::escape(self::getConnection(), $value, $quote);
 	}
@@ -408,7 +423,7 @@ abstract class MOMBase
 	  * @param bool $quote wrap value in single quote
 	  * @return string
 	  */
-	public function escapeObject($value, $quote = TRUE)
+	protected function escapeObject($value, $quote = TRUE)
 	{
 		return self::escape($this->__mbConnection, $value, $quote);
 	}

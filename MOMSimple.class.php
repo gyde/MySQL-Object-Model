@@ -2,7 +2,7 @@
 /*NAMESPACE*/
 
 use /*USE_NAMESPACE*/MOMBaseException as BaseException;
-use /*USE_NAMESPACE*/MOMMySQLException as MySqlException;
+use /*USE_NAMESPACE*/MOMMySQLException as MySQLException;
 
 class MOMSimple extends MOMBase
 {
@@ -21,7 +21,7 @@ class MOMSimple extends MOMBase
 	  * Get by primary key
 	  * @param mixed $id
 	  * @throws BaseException
-	  * @throws MySqlException
+	  * @throws MySQLException
 	  * @return object
 	  */
 	public static function getById($id)
@@ -32,7 +32,7 @@ class MOMSimple extends MOMBase
 			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty primary key value');
 
 		$new = NULL;
-		if (($row = self::getRowById($id, self::CONTEXT_STATIC)) !== FALSE)
+		if (($row = self::getRowById($id, self::CONTEXT_STATIC)) !== NULL)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
@@ -44,8 +44,8 @@ class MOMSimple extends MOMBase
 	/**
 	  * Get mysql row by primary key
 	  * @param mixed $id escaped
-	  * @throws MySqlException
-	  * @return resource(mysql resource) or FALSE on failure
+	  * @throws MySQLException
+	  * @return resource(mysql resource) or NULL on failure
 	  */
 	private function getRowById($id, $context)
 	{
@@ -125,13 +125,9 @@ class MOMSimple extends MOMBase
 		foreach (static::$__mbDescriptions[$class] as $field)
 		{
 			//Ensures that the primay key and mysql protected value defaults are not in values array
-			if ($field['Field'] !== $primaryKey && !in_array($field['Default'], self::$__mbProtectedValueDefaults))
-			{
-				if ($this->$field['Field'] !== NULL)
-					$values[] = '`'.$field['Field'].'` = '.$this->escapeObject($this->$field['Field']);
-				else
-					$values[] = '`'.$field['Field'].'` = NULL';
-			}
+			if ($field['Field'] !== $primaryKey && 
+				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
+				$values[] = $this->escapeObjectPair($field['Field']);
 
 			if ($field['Key'] == 'PRI' && $field['Extra'] == 'auto_increment')
 				$autoIncrement = TRUE;
