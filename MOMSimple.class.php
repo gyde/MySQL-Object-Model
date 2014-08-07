@@ -88,7 +88,7 @@ class MOMSimple extends MOMBase
 			$id = $this->$keyname;
 
 		if (($row = self::getRowById($id, self::CONTEXT_OBJECT)) === NULL)
-			throw new BaseException(BaseException_OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
+			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
 		
 		$this->fillByObject($row);
 	}
