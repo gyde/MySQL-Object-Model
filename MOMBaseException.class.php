@@ -25,7 +25,10 @@ class MOMBaseException extends MOMException
 	const MESSAGE_5 = 'Missing compound key defition, please define const COLUMN_COMPOUND_KEYS in extending class';
 
 	const COMPOUND_KEYS_NOT_COMPOUND = 6;
-	const MESSAGE_6 = 'Whend defining compound key definition with const COLUMN_COMPOUND_KEYS, please define a mininum if two keys in extending class';
+	const MESSAGE_6 = 'When defining compound key definition with const COLUMN_COMPOUND_KEYS, please define a mininum of two keys in extending class';
+
+	const COMPOUND_KEY_MISSING_VALUE = 7;
+	const MESSAGE_7 = 'When trying to build a compound key, a value is missing on the object';
 
 	const OBJECT_NOT_SAVED = 100;
 	const MESSAGE_100 = 'Object could not be saved (created/updated)'; 
@@ -51,43 +54,4 @@ class MOMBaseException extends MOMException
 	/**
 	  * EXCEPTION CONSTANTS END
 	  */
-
-	private $internalMessage = '';
-
-	private static $constants = array();
-
-	/**
-	  * Construct a message using a code
-	  * Will translate the code into a message
-	  * @param int $code
-	  * @param string $internalMessage
-	  * @param Exception $previous
-	  */
-	public function __construct ($code, $internalMessage = '', $previous = NULL)
-	{
-		parent::__construct($this->getConstant('MESSAGE_'.$code), $code, $previous);
-		$this->internalMessage = $internalMessage;
-	}
-
-	/**
-	  * Returns the internal message, used for debugging, may contain sensitive information
-	  * DO NOT SHOW END USERS
-	  * @return string
-	  */
-	public function getInternalMessage()
-	{
-		return $this->internalMessage;
-	}
-	
-	/**
-	 * Returns the constant value
-	 * Uses ReflectionClass to read constants on the class
-	 * @param string $name
-	 * @return value
-	 */
-	private function getConstant($name)
-	{
-		$reflection = new \ReflectionClass($this);
-		return $reflection->getConstant($name);
-	}
 }
