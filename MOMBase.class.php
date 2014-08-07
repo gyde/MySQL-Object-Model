@@ -100,7 +100,7 @@ abstract class MOMBase
 	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	abstract public static function getRowIdentifier($row);
+	abstract protected static function getRowIdentifier($row);
 
 	/**
 	  * Get one object
