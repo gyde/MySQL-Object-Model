@@ -15,7 +15,10 @@ Comming soon
 The generic / factory class which all object models extends from. This contains generic query function and requires that extending classes implements needed methods.
 
 ### MOMSimple.class.php
-A simple scaffoling class for MySQL PRIMARY KEY tables
+A simple scaffoling class for MySQL tables with ONE column as primary key
+
+### MOMCompound
+A compound scaffoling class for MySQL tables with SEVERAL columns as primary key
 
 ### Tests (PHPUnit)
 Tests has been designed using PHPUnit and will create and dropped tables as needed. 
@@ -33,7 +36,7 @@ export MYSQLI_HOST="YOUR_HOST"
 export MYSQLI_USERNAME="YOUR_USERNAME"
 export MYSQLI_PASSWD="YOUR_PASSWORD"
 
-phpunit --bootstrap autoload.php tests/MOMSimpleTest.class.php
+phpunit --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
 ```
 
 ### Tools 
