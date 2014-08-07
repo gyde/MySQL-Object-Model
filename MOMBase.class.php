@@ -414,6 +414,22 @@ abstract class MOMBase
 	}
 
 	/**
+	  * Added toString method, to format object to simple output
+	  * @return string
+	  */
+	public function __toString()
+	{
+		$class = get_called_class();
+		$str = 'Instance of '.$class.':'."\n";
+		foreach (self::$__mbDescriptions[$class] as $field)
+		{
+			$str .= $field['Field'].': '.var_export($this->$field['Field'])."\n";
+		}
+
+		return $str;
+	}
+
+	/**
 	  * Escape a value according to mysqli connection
 	  * @param mysqli $connection mysql connection
 	  * @param string $value
