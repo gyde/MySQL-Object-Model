@@ -20,6 +20,7 @@ class MOMMySQLException extends \Exception
 	  */
 	public function __construct($mysqlQuery, $mysqlError, $mysqlErrno)
 	{
+		parent::__construct($mysqlError.' QUERY['.$mysqlQuery.']', $mysqlErrno);	
 		$this->mysqlQuery = $mysqlQuery;
 		$this->mysqlError = $mysqlError;
 		$this->mysqlErrno = $mysqlErrno;
