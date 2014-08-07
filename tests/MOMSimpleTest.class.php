@@ -111,5 +111,16 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertEquals($object1, $object2);
 	}
+	
+	public function testDelete()
+	{
+		$objects = MOMSimpleActual::getAll();
+		foreach ($objects as $object)
+			$object->delete();
+
+		$objects = MOMSimpleActual::getAll();
+
+		$this->assertCount(0, $objects);
+	}
 }
 ?>
