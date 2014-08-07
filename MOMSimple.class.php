@@ -107,7 +107,7 @@ class MOMSimple extends MOMBase
 		
 		$sql = 
 			'DELETE FROM `'.static::DB.'`.`'.static::TABLE.'`'.
-			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObejct($keyvalue);
+			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($keyvalue);
 
 		static::tryToDelete($sql);
 	}
@@ -158,7 +158,7 @@ class MOMSimple extends MOMBase
 	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	public static function getRowIdentifier($row)
+	protected static function getRowIdentifier($row)
 	{
 		return $row[static::COLUMN_PRIMARY_KEY];
 	}
