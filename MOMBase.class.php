@@ -264,9 +264,9 @@ abstract class MOMBase
 		{
 			$this->queryObject($sql);
 		}
-		catch (MySqlException $e)
+		catch (MySQLException $e)
 		{
-			if ($e->getMysqlErrno() == MySqlException::ER_DUP_ENTRY)
+			if ($e->getMysqlErrno() == MySQLException::ER_DUP_ENTRY)
 				throw new BaseException(BaseException::OBJECT_DUPLICATED_ENTRY, get_called_class().' tried to created new object, but primary key already exists', $e);
 
 			throw new BaseException(BaseException::OBJECT_NOT_SAVED, $e->getMysqlError(), $e);
