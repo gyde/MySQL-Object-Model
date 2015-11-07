@@ -69,6 +69,8 @@ abstract class MOMBase
 		{
 			if (!in_array($field['Default'], self::$__mbProtectedValueDefaults))
 				$this->$field['Field'] = $field['Default'];
+			else
+				$this->$field['Field'] = NULL;
 		}
 	}
 
