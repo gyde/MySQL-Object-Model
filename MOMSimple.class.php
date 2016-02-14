@@ -26,6 +26,8 @@ class MOMSimple extends MOMBase
 	  */
 	public static function getById($id)
 	{
+		$class = get_called_class();
+		$this->checkDbAndTableConstants($class);
 		self::hasPrimaryKey();
 
 		if (empty($id))

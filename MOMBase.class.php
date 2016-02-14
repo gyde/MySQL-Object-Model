@@ -56,13 +56,14 @@ abstract class MOMBase
 	  */
 	public function __construct(\mysqli $connection = NULL)
 	{
+		$class = get_called_class();
+		$this->checkDbAndTableConstants($class);
+
 		if ($connection instanceOf \mysqli)
 			$this->__mbConnection = $connection;
 		else
 			$this->__mbConnection = self::getConnection();
 
-		$class = get_called_class();
-		$this->checkDbAndTableConstants($class);
 		$this->describe($class);
 
 		foreach (self::$__mbDescriptions[$class] as $field)
