@@ -87,6 +87,12 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals(1, count($objects));
 	}
 
+	public function testGetAllLimit()
+	{
+		$objects = MOMSimpleActual::getAll(NULL, FALSE, 1, 1);
+		$this->assertEquals(1, count($objects));
+	}
+
 	public function testClone()
 	{
 		$object1 = new MOMSimpleActual(self::$connection);

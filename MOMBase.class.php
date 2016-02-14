@@ -140,36 +140,42 @@ abstract class MOMBase
 	  * Get all objects
 	  * @param string $order MySQL order clause
 	  * @param bool $keyed if set, returns an associated array with unique key as array key
+	  * @param int $limit MySQL LIMIT clause
+	  * @param int $offset MySQL LIMIT clause (offset)
 	  * @throws \util\DatabaseException
 	  * @return object[]
 	  */
-	public static function getAll ($order = NULL, $keyed = FALSE)
+	public static function getAll ($order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL)
 	{
-		return self::getAllByWhereGeneric(NULL, $order, $keyed);
+		return self::getAllByWhereGeneric(NULL, $order, $keyed, $limit, $offset);
 	}
 
 	/**
-	 * Get many objects by a MySQL WHERE clause
-	 * @param string $where MySQL WHERE clause
-	 * @param string $order MySQL ORDER clause
-	 * @param bool $keyed if set, returns an associated array with unique key as array key
-	 * @throws \util\DatabaseException
-	 * @return object[]
-	 */
-	public static function getAllByWhere($where, $order = NULL, $keyed = FALSE)
+	  * Get many objects by a MySQL WHERE clause
+	  * @param string $where MySQL WHERE clause
+	  * @param string $order MySQL ORDER clause
+	  * @param bool $keyed if set, returns an associated array with unique key as array key
+	  * @param int $limit MySQL LIMIT clause
+	  * @param int $offset MySQL LIMIT clause (offset)
+	  * @throws \util\DatabaseException
+	  * @return object[]
+	  */
+	public static function getAllByWhere($where, $order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL)
 	{
-		return self::getAllByWhereGeneric($where, $order, $keyed);
+		return self::getAllByWhereGeneric($where, $order, $keyed, $limit, $offset);
 	}
 
 	/**
-	 * Get many obejcts by a sql where clause
-	 * @param string $where SQL where clause
-	 * @param string $order SQL order clause
-	 * @param bool $keyed if set, returns an associated array with unique key as array key
-	 * @throws \util\DatabaseException
-	 * @return object[]
+	  * Get many obejcts by a sql where clause
+	  * @param string $where SQL where clause
+	  * @param string $order SQL order clause
+	  * @param bool $keyed if set, returns an associated array with unique key as array key
+	  * @param int $limit MySQL LIMIT clause
+	  * @param int $offset MySQL LIMIT clause (offset)
+	  * @throws \util\DatabaseException
+	  * @return object[]
 	 */
-	protected static function getAllByWhereGeneric($where = NULL, $order = NULL, $keyed = FALSE)
+	protected static function getAllByWhereGeneric($where = NULL, $order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL)
 	{
 		$many = array();
 
@@ -180,6 +186,9 @@ abstract class MOMBase
 
 		if ($order)
 			$sql .= ' ORDER BY '.$order;
+
+		if ($limit !== NULL || $offset !== NULL)
+			$sql .= ' LIMIT '.(int)$offset.','.(int)$limit;
 
 		$res = self::queryStatic($sql);
 		while (($row = $res->fetch_assoc()) !== NULL)
