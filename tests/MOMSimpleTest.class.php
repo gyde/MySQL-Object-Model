@@ -4,6 +4,7 @@ namespace /*NAMESPACE_SLASH*/tests;
 class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 {
 	static $connection = NULL;
+	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
@@ -37,6 +38,15 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 			self::$skipTests = TRUE;
 		}
 
+		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		if (self::$memcache !== FALSE)
+		{
+			\MOMBase::setMemcache(self::$memcache, 300);
+		}
+		else
+		{
+			self::$skipTests = TRUE;
+		}
 	}
 
 	public static function tearDownAfterClass()
@@ -46,6 +56,8 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 			'DROP TABLE '.MOMSimpleActual::DB.'.'.MOMSimpleActual::TABLE;
 
 		self::$connection->query($sql);
+		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache->flush();
 	}
 
 	public function setUp()
@@ -59,20 +71,34 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	public function testSave()
 	{
-		$object1 = new MOMSimpleActual(self::$connection);
+		$object1 = new MOMSimpleActual();
 		$object1->unique = uniqid();
+		$this->assertEquals($object1->getMemcacheTimestamp(), 0);
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
+		$this->assertGreaterThan(0, $object1->getMemcacheTimestamp()); 
 
 		$object2 = MOMSimpleActual::getById($object1->primary_key);
-		$this->assertEquals($object1, $object2);
+		$this->assertGreaterThan(0, $object2->getMemcacheTimestamp()); 
+		$this->assertEquals($object1->getMemcacheTimestamp(), $object2->getMemcacheTimestamp());
+		$this->assertEquals($object1->primary_key, $object2->primary_key);
+		$this->assertEquals($object1->state, $object2->state);
+		$this->assertEquals($object1->updated, $object2->updated);
+		$this->assertEquals($object1->unique, $object2->unique);
 
-		$object3 = new MOMSimpleActual(self::$connection);
+		sleep(1);
+
+		$object3 = new MOMSimpleActual();
 		$object3->state = 'SET';
 		$object3->unique = uniqid();
 		$object3->save();
 
-		$this->assertNotEquals($object2, $object3);
+		$this->assertGreaterThan(0, $object3->getMemcacheTimestamp()); 
+		$this->assertNotEquals($object2->getMemcacheTimestamp(), $object3->getMemcacheTimestamp());
+		$this->assertNotEquals($object2->primary_key, $object3->primary_key);
+		$this->assertNotEquals($object2->state, $object3->state);
+		$this->assertNotEquals($object2->updated, $object3->updated);
+		$this->assertNotEquals($object2->unique, $object3->unique);
 	}
 
 	public function testGetAll()
@@ -95,27 +121,36 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	public function testClone()
 	{
-		$object1 = new MOMSimpleActual(self::$connection);
+		$object1 = new MOMSimpleActual();
 		$object1->state = MOMSimpleActual::STATE_GO;
 		$object1->unique = uniqid();
 		$object1->save();
+
+		sleep(1);
 
 		$object2 = clone $object1;
 		$object2->unique = uniqid();
 		$object2->save();
 
-		$this->assertNotEquals($object1, $object2);
+		$this->assertNotEquals($object1->primary_key, $object2->primary_key);
+		$this->assertEquals($object1->state, $object2->state);
+		$this->assertNotEquals($object1->updated, $object2->updated);
+		$this->assertNotEquals($object1->unique, $object2->unique);
+		$this->assertGreaterThan($object1->getMemcacheTimestamp(), $object2->getMemcacheTimestamp());
 	}
 
 	public function testUnique()
 	{
-		$object1 = new MOMSimpleActual(self::$connection);
+		$object1 = new MOMSimpleActual();
 		$object1->unique = uniqid();
 		$object1->save();
 
 		$object2 = MOMSimpleActual::getByUnique($object1->unique);
 
-		$this->assertEquals($object1, $object2);
+		$this->assertEquals($object1->primary_key, $object2->primary_key);
+		$this->assertEquals($object1->state, $object2->state);
+		$this->assertEquals($object1->updated, $object2->updated);
+		$this->assertEquals($object1->unique, $object2->unique);
 	}
 	
 	public function testDelete()

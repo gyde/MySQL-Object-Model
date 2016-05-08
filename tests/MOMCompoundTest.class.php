@@ -4,6 +4,7 @@ namespace /*NAMESPACE_SLASH*/tests;
 class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 {
 	static $connection = NULL;
+	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
@@ -40,6 +41,15 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 			self::$skipTests = TRUE;
 		}
 
+		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		if (self::$memcache !== FALSE)
+		{
+			\MOMBase::setMemcache(self::$memcache, 300);
+		}
+		else
+		{
+			self::$skipTests = TRUE;
+		}
 	}
 
 	public static function tearDownAfterClass()
@@ -49,6 +59,8 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 			'DROP TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE;
 
 		self::$connection->query($sql);
+		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache->flush();
 	}
 
 	public function setUp()
@@ -72,7 +84,10 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 
 		$ids = array('key1' => $object1->key1, 'key2' => $object1->key2, 'key3' => $object1->key3);
 		$object2 = MOMCompoundActual::getByIds($ids);
-		$this->assertEquals($object1, $object2);
+		$this->assertEquals($object1->key1, $object2->key1);
+		$this->assertEquals($object1->key2, $object2->key2);
+		$this->assertEquals($object1->key3, $object2->key3);
+		$this->assertEquals($object1->unique, $object2->unique);
 
 		$object3 = new MOMCompoundActual(self::$connection);
 		$object3->key1 = 1;
@@ -82,13 +97,17 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		$object3->unique = uniqid();
 		$object3->save();
 
-		$this->assertNotEquals($object2, $object3);
+		$this->assertEquals($object1->key1, $object3->key1);
+		$this->assertNotEquals($object1->key2, $object3->key2);
+		$this->assertEquals($object1->key3, $object3->key3);
+		$this->assertNotEquals($object1->unique, $object3->unique);
 	}
 
 	public function testDelete()
 	{
 		$ids = array('key1' => 1, 'key2' => 1, 'key3' => 1);
 		$object = MOMCompoundActual::getByIds($ids);
+		$this->assertNotNull($object);
 		$object->delete();
 
 		$object = MOMCompoundActual::getByIds($ids);

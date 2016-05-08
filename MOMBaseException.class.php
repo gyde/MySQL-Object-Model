@@ -51,6 +51,9 @@ class MOMBaseException extends MOMException
 	const OBJECTS_NOT_FOUND = 201;
 	const MESSAGE_201 = 'Objects could not be fetched';
 
+	const MEMCACHE_NOT_ENABLED_BUT_SET = 300;
+	const MESSAGE_300 = 'Setting Memcached on object, but object does not have memcache enabled, remember to set memcache using constant USE_MEMCACHE = TRUE';
+
 	/**
 	  * EXCEPTION CONSTANTS END
 	  */

@@ -8,17 +8,31 @@ abstract class MOMBase
 {
 	const RESERVED_PREFIX = '__mb';
 	const GLOBAL_CONNECTION = '__mbGlobalConnection';
+	const GLOBAL_MEMCACHE = '__mbGlobalMemcache';
 
 	const CONTEXT_STATIC = 'STATIC';
 	const CONTEXT_OBJECT = 'OBJECT';
+
+	const USE_STATIC_CACHE = FALSE;
+	const USE_MEMCACHE = FALSE;
+
+	const CLASS_REVISION = 0;
 
 	/**
 	  * Every object has its own mysqli connection
 	  * If none is providede on object instansiation one is picked
 	  * from $__mbConnections
-	  * @var mysqli
+	  * @var \mysqli $__mbConnection
 	  */
 	protected $__mbConnection = NULL;
+
+	/**
+	  * Every object has its own memcache connection (most likely shared and only used if memcache is enabled for the extending class)
+	  * If none is providede on object instansiation one is picked
+	  * from $__mbMemcaches if available either globally or by class
+	  * @var array<string, mixed> $__mbMemcache
+	  */
+	protected $__mbMemcache = FALSE;
 
 	/**
 	  * Defines object behavior on save / update
@@ -27,8 +41,26 @@ abstract class MOMBase
 	protected $__mbNewObject = TRUE;
 
 	/**
+	  * Defines when object was put in static cache
+	  * @var int $__mbStaticCacheTimestamp
+	  */
+	protected $__mbStaticCacheTimestamp = 0;
+
+	/**
+	  * Defines when object was put in memcache
+	  * @var int $__mbMemcacheTimestamp
+	  */
+	protected $__mbMemcacheTimestamp = 0;
+
+	/**
+	  * Static cache for objects
+	  * @var string[][]
+	  */
+	protected static $__mbStaticCache = array();
+
+	/**
 	  * Static cache with all model descriptions
-	  * @var string[]
+	  * @var array<classname, array<string, string>>
 	  */
 	protected static $__mbDescriptions = array();
 
@@ -45,16 +77,26 @@ abstract class MOMBase
 	  * Static cache with all mysqli connections
 	  * Can contain a global connection, or one per extending class
 	  * Depending on the use of setConnection
-	  * @var mysqli[]
+	  * @var \mysqli[]
 	  */
 	protected static $__mbConnections = array();
+
+	/**
+	  * Static cache with all memcache connections
+	  * Can contain a global connection, or one per extending class
+	  * Depending on the use of setMemcache
+	  * @var \memcached[]
+	  */
+	protected static $__mbMemcaches = array();
 
 	/**
 	  * Constructs an object of extending class using the database fields
 	  * Checks if the extending class has the correct consts and describes the extending class via mysqli
 	  * @param \mysqli $connection mysqli connection
+	  * @param \memcached $memcache memcache connection
+	  * @param int $memcacheExpiration memcache expiration in seconds
 	  */
-	public function __construct(\mysqli $connection = NULL)
+	public function __construct(\mysqli $connection = NULL, \Memcached $memcache = NULL, $memcacheExpiration = 0)
 	{
 		$class = get_called_class();
 		$this->checkDbAndTableConstants($class);
@@ -63,6 +105,19 @@ abstract class MOMBase
 			$this->__mbConnection = $connection;
 		else
 			$this->__mbConnection = self::getConnection();
+
+		if ($memcache instanceOf \Memcache)
+		{
+			if (!self::useMemcache())
+				throw new BaseException(BaseException::MEMCACHE_NOT_ENABLED_BUT_SET);
+			$options = array('memcache' => $memcache, 'expiration' => (int)$memcacheExpiration);
+			$this->__mbMemcache = $options;
+		}
+		else
+		{
+			if (self::useMemcache())
+				$this->__mbMemcache = self::getMemcache();
+		}
 
 		$this->describe($class);
 
@@ -247,6 +302,7 @@ abstract class MOMBase
 	{
 		$this->fill($row);
 		$this->__mbConnection = self::getConnection();
+		$this->__mbMemcache = self::getMemcache();
 	}
 
 	/**
@@ -300,23 +356,36 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Describes the class statically
+	  * Describes the class using DESCRIBE 
+	  * Caches model in static cache and in Memcache(if enabled)
 	  * Used when creating new objects, for default values and field info
+	  * Entry in memcache will be keyed using classname and CLASS_REVISION
 	  * @param string $class classname of the extending class
 	  */
 	private function describe($class)
 	{
 		if (!array_key_exists($class, self::$__mbDescriptions))
 		{
-			$sql = 'DESCRIBE `'.static::DB.'`.`'.static::TABLE.'`';
-			$res = $this->queryObject($sql);
-			while (($row = $res->fetch_assoc()) !== NULL)
+			$selector = self::getMemcacheKey('DESCRIPTION');
+			if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
 			{
-				// If Field start is equal to self::RESERVED_PREFIX
-				if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
-					throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+				self::$__mbDescriptions[$class] = $entry;
+			}
+			else
+			{
+				$sql = 'DESCRIBE `'.static::DB.'`.`'.static::TABLE.'`';
+				$res = $this->queryObject($sql);
+				$description = array();
+				while (($row = $res->fetch_assoc()) !== NULL)
+				{
+					// If Field start is equal to self::RESERVED_PREFIX
+					if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
+						throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
 
-				self::$__mbDescriptions[$class][] = $row;
+					$description[] = $row;
+				}
+				self::$__mbDescriptions[$class] = $description;
+				self::setMemcacheEntry($selector, $description);
 			}
 		}
 	}
@@ -472,7 +541,7 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Get a mysqli connection to the database, either from classname based connections or the global connection
+	  * Get a mysqli connection to a database server, either from classname based connections or the global connection
 	  * If none is found an exception is thrown
 	  * @throws MOMBaseException
 	  * @return mysqli
@@ -490,21 +559,230 @@ abstract class MOMBase
 
 	/**
 	  * Set a database handler for the class
-	  * @param mysqli $connection mysqli connection
+	  * If called directly on MOMBase, connection is set globally
+	  * @param \mysqli $connection mysqli connection
+	  * @param bool $global set the mysqli connection globally
 	  */
 	public static function setConnection(\mysqli $connection, $global = FALSE)
 	{
-		if ($global)
+		$class = get_called_class();
+		if ($global || $class == __CLASS__)
 			static::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
 		else
-			static::$__mbConnections[get_called_class()] = $connection;
+			static::$__mbConnections[$class] = $connection;
+	}
+
+	/**
+	  * Get a Memcached connection to a memcache server, either from classname based memcaches or the global memcache
+	  * If none is found returns FALSE, aka memcaching is not enabled
+	  * @return array<memcache => \Memcached, expiration => int>, returns FALSE when memcache is not enabled
+	  */
+	private static function getMemcache()
+	{
+		$class = get_called_class();
+		if (isset(self::$__mbMemcaches[$class]))
+			return self::$__mbMemcaches[$class];
+		else if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
+			return self::$__mbMemcaches[self::GLOBAL_MEMCACHE];
+		else
+			return FALSE;
+	}
+
+	/**
+	  * Set a memcache handler for the extending class
+	  * If called directly on MOMBase, connection is set globally
+	  * @param \Memcached $memcache 
+	  * @param int $expiration
+	  * @param bool $global set the memcache globally
+	  */
+	public static function setMemcache(\Memcached $memcache, $expiration, $global = FALSE)
+	{
+		$class = get_called_class();
+		$options = array('memcache' => $memcache, 'expiration' => (int)$expiration);
+		if ($global || $class == __CLASS__)
+			static::$__mbMemcaches[self::GLOBAL_MEMCACHE] = $options;
+		else
+			static::$__mbMemcaches[$class] = $options;
+	}
+
+	/**
+	  * Get the internal memcache timestamp
+	  * This is set on the object once its added to memcache
+	  * @return int
+	  */
+	public function getMemcacheTimestamp()
+	{
+		return $this->__mbMemcacheTimestamp;
+	}
+
+	/**
+	  * Get the internal static cache timestamp
+	  * This is set on the object once its added to the static cache
+	  * @return int
+	  */
+	public function getStaticCacheTimestamp()
+	{
+		return $this->__mbStaticCacheTimestamp;
+	}
+
+	/**
+	  * Get entry from static cache
+	  * @param string $selector
+	  * @return object, object[] or FALSE if no data is found
+	  */
+	protected static function getStaticEntry($selector)
+	{
+		if (static::useStaticCache())
+		{
+			$class = get_called_class();
+			if (isset(self::$__mbStaticCache[$class][$selector]))
+				return self::$__mbStaticCache[$class][$selector];
+		}
+
+		return FALSE;
+	}
+
+	/**
+	  * set entry in static cache
+	  * @param string $selector
+	  * @param mixed $value provide object or array of objects
+	  */
+	protected static function setStaticEntry($selector, $value)
+	{
+		if (static::useStaticCache())
+		{
+			$class = get_called_class();
+			if ($value instanceOf MOMBase)
+				$value->__mbStaticCacheTimestamp = time();
+			else if (is_array($value))
+			{
+				foreach ($value as $element)
+				{
+					if ($element instanceOf MOMBase)
+						$value->__mbStaticCacheTimestamp = time();
+				}
+			}
+			self::$__mbStaticCache[$class][$selector] = $value;
+		}
+	}
+
+	/**
+	  * set entry in static cache
+	  * @param string $selector
+	  */
+	protected static function deleteStaticEntry($selector)
+	{
+		if (static::useStaticCache())
+		{
+			$class = get_called_class();
+			unset(self::$__mbStaticCache[$class][$selector]);
+		}
+	}
+
+	/**
+	  * Set an entry in memcache
+	  * @param string $selector
+	  * @param mixed $value
+	  */
+	protected static function setMemcacheEntry($selector, $value, $context = self::CONTEXT_STATIC)
+	{
+		if (static::useMemcache())
+		{
+			if ($value instanceOf MOMBase)
+				$value->__mbMemcacheTimestamp = time();
+			else if (is_array($value))
+			{
+				foreach ($value as $element)
+				{
+					if ($element instanceOf MOMBase)
+						$element->__mbMemcacheTimestamp = time();
+				}
+			}
+
+			if ($context == self::CONTEXT_STATIC)
+			{
+				if (($memcache = self::getMemcache()) !== FALSE)
+					$memcache['memcache']->set(self::getMemcacheKey($selector), $value, $memcache['expiration']);
+			}
+			else if ($context == self::CONTEXT_OBJECT)
+			{
+				if ($value->__mbMemcache !== FALSE)
+					$value->__mbMemcache['memcache']->set(self::getMemcacheKey($selector), $value, $value->__mbMemcache['expiration']);
+
+			}
+		}
+	}
+
+	/**
+	  * Get an entry from memcache
+	  * @param string $selector
+	  * @return data will return FALSE on error or when memcache is not enabled
+	  */
+	protected static function getMemcacheEntry($selector)
+	{
+		if (static::useMemcache())
+		{
+			if (($memcache = self::getMemcache()) !== FALSE)
+				return $memcache['memcache']->get(self::getMemcacheKey($selector));
+		}
+
+		return FALSE;
+	}
+
+	/**
+	  * Delete an entry in memcache
+	  * @param string $selector
+	  */
+	protected function deleteMemcacheEntry($selector)
+	{
+		if (static::useMemcache())
+		{
+			if ($this->__mbMemcache !== FALSE)
+				$this->__mbMemcache['memcache']->delete(self::getMemcacheKey($selector));
+		}
+	}
+
+	/**
+	  * Get the memcache key for the specified selector
+	  * Prepends called class name
+	  * @param string $selector
+	  * @return string
+	  */
+	protected static function getMemcacheKey($selector)
+	{
+		return get_called_class().'_'.static::CLASS_REVISION.'_'.$selector;
+	}
+
+	/**
+	  * Checks if the extending class is using static object caching
+	  * @return bool
+	  */
+	protected static function useStaticCache()
+	{
+		if (static::USE_STATIC_CACHE)
+			return TRUE;
+		else
+			return FALSE;
+	}
+
+	/**
+	  * Checks if the extending class is using static object caching
+	  * @return bool
+	  */
+	protected static function useMemcache()
+	{
+		if (static::USE_MEMCACHE)
+			return TRUE;
+		else
+			return FALSE;
 	}
 	
 	/**
 	  * Checks if the extending class has needed info to use MOMBase
 	  * @param string $classname classname of the extending class
-	  */
-	private static function checkDbAndTableConstants($classname)
+	
+   	 */
+	protected static function checkDbAndTableConstants($classname)
 	{
 		if (!defined('static::DB'))
 			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB const');
