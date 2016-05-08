@@ -36,7 +36,7 @@ export MYSQLI_HOST="YOUR_HOST"
 export MYSQLI_USERNAME="YOUR_USERNAME"
 export MYSQLI_PASSWD="YOUR_PASSWORD"
 
-phpunit --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
+./phpunit-4.8.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
 ```
 
 ### Tools 
