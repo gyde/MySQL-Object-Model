@@ -3,6 +3,7 @@ MySQL-Obejct-Model
 
 A PHP Object Model using MySQL as backend via Mysqli. Allows fast scaffoling of Models with a high performance MySQL specific backend.
 First version will be available soon, then more information regarding installation, use and namespacing will follow.
+Memcache and Static cache has been added for MOMBase and MOMSimple
 
 ### Version - Alpha Testing
 This project is currently begin used in small projects by myself, and is far from production ready / stable.
@@ -32,6 +33,7 @@ Inorder to run the tests, the following needs to be satisfied:
 
 
 ```sh
+export MEMCACHE_HOST="YOUR_HOST"
 export MYSQLI_HOST="YOUR_HOST"
 export MYSQLI_USERNAME="YOUR_USERNAME"
 export MYSQLI_PASSWD="YOUR_PASSWORD"
