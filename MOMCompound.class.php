@@ -27,7 +27,7 @@ class MOMCompound extends MOMBase
 	public static function getByIds($ids)
 	{
 		$class = get_called_class();
-		$this->checkDbAndTableConstants($class);
+		self::checkDbAndTableConstants($class);
 		self::hasCompoundKeys();
 
 		if (empty($ids) || !is_array($ids))
