@@ -53,6 +53,15 @@ abstract class MOMBase
 	protected $__mbMemcacheTimestamp = 0;
 
 	/**
+	  * Defines database names, this will override usage of constant DB
+	  * This is mapped by class name and supports nested extending
+	  * Use method setDbName()
+	  * @see getDbName
+	  * @var string $__mbDatabaseNames
+	  */
+	protected static $__mbDatabaseNames = NULL;
+
+	/**
 	  * Static cache for objects
 	  * @var string[][]
 	  */
@@ -72,6 +81,14 @@ abstract class MOMBase
 	  * @var string[]
 	  */
 	protected static $__mbProtectedValueDefaults = array('CURRENT_TIMESTAMP', 'NOW()');
+
+	/**
+	  * Names of all basic classes in MySQL-Object-Model
+	  * Used as stop words when searching static arrays for 
+	  * nested extending class data
+	  * @var string[]
+	  */
+	protected static $__mbProtectedClasses = array('MOMBase','MOMSimple','MOMCompound');
 
 	/**
 	  * Static cache with all mysqli connections
@@ -161,6 +178,48 @@ abstract class MOMBase
 	abstract protected static function getRowIdentifier($row);
 
 	/**
+	  * Set database name
+	  * @param string $name
+	  */
+	public static function setDbName($name)
+	{
+		static::$__mbDatabaseNames[get_called_class()] = $name;
+	}
+
+	/**
+	  * Get database name
+	  * @return string
+	  */
+	public static function getDbName()
+	{
+		if (is_array(static::$__mbDatabaseNames))
+		{
+			if (($name = self::getNestedDbName(get_called_class())) !== FALSE)
+				return $name;
+		}
+
+		return static::DB;
+	}
+
+	/**
+	  * Get database name defined using setDbName
+	  * This will backtrack extending classes 
+	  * Note, this method is recursive
+	  * @param string $class
+	  * @return string Will return FALSE if no db name is found
+	  */
+	protected static function getNestedDbName($class)
+	{
+		if (in_array($class, self::$__mbProtectedClasses))
+			return FALSE;
+
+		if (isset(self::$__mbDatabaseNames[$class]))
+			return self::$__mbDatabaseNames[$class];
+
+		return self::getNestedDbName(get_parent_class($class));
+	}
+
+	/**
 	  * Get one object
 	  * @param string $where MySQL where clause
 	  * @param string $order MySQL order clause
@@ -171,7 +230,7 @@ abstract class MOMBase
 	{
 		$new = NULL;
 
-		$sql = 'SELECT * FROM `'.static::DB.'`.`'.static::TABLE.'`';
+		$sql = 'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
 
 		if ($where)
 			$sql .= ' WHERE '.$where;
@@ -234,7 +293,7 @@ abstract class MOMBase
 	{
 		$many = array();
 
-		$sql = 'SELECT * FROM `'.static::DB.'`.`'.static::TABLE.'`';
+		$sql = 'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
 
 		if ($where)
 			$sql .= ' WHERE '.$where;
@@ -271,7 +330,7 @@ abstract class MOMBase
 			throw new BaseException(BaseException::OBJECTS_NOT_DELETED);
 
 		$sql = 
-			'DELETE FROM `'.static::DB.'`.`'.static::TABLE.'`'.
+			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE '.$where;
 
 		try
@@ -373,7 +432,7 @@ abstract class MOMBase
 			}
 			else
 			{
-				$sql = 'DESCRIBE `'.static::DB.'`.`'.static::TABLE.'`';
+				$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
 				$res = $this->queryObject($sql);
 				$description = array();
 				while (($row = $res->fetch_assoc()) !== NULL)
@@ -784,10 +843,10 @@ abstract class MOMBase
    	 */
 	protected static function checkDbAndTableConstants($classname)
 	{
-		if (!defined('static::DB'))
-			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB const');
+		if (!defined('static::DB') && self::getNestedDbName() === FALSE)
+			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB defined');
 
 		if (!defined('static::TABLE'))
-			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no TABLE const');
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no TABLE constant defined');
 	}
 }
