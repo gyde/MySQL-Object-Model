@@ -85,7 +85,7 @@ class MOMSimple extends MOMBase
 			$id = $this->escapeObject($id);
 
 		$sql = 
-			'SELECT * FROM `'.static::DB.'`.`'.static::TABLE.'`'.
+			'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$id;
 
 		$res = NULL;
@@ -142,7 +142,7 @@ class MOMSimple extends MOMBase
 			throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class().'->'.__FUNCTION__.' failed to delete, primary key was empty');
 		
 		$sql = 
-			'DELETE FROM `'.static::DB.'`.`'.static::TABLE.'`'.
+			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($id);
 
 		static::tryToDelete($sql);
@@ -179,13 +179,13 @@ class MOMSimple extends MOMBase
 			$values[] = ' `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($this->$primaryKey);
 
 			$sql = 
-				'INSERT INTO `'.static::DB.'`.`'.static::TABLE.'` SET'.
+				'INSERT INTO `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values);
 		}
 		else
 		{
 			$sql = 
-				'UPDATE `'.static::DB.'`.`'.static::TABLE.'` SET'.
+				'UPDATE `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values).
 				' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($this->$primaryKey);
 		}

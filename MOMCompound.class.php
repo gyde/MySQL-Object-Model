@@ -74,7 +74,7 @@ class MOMCompound extends MOMBase
 		$keys = $this->getKeyPairs();
 
 		$sql = 
-			'DELETE FROM `'.static::DB.'`.`'.static::TABLE.'`'.
+			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE '.join(' AND ', $keys);
 
 		static::tryToDelete($sql);
@@ -94,13 +94,13 @@ class MOMCompound extends MOMBase
 			$values = array_merge($keys, $values);
 
 			$sql = 
-				'INSERT INTO `'.static::DB.'`.`'.static::TABLE.'` SET'.
+				'INSERT INTO `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values);
 		}
 		else
 		{
 			$sql = 
-				'UPDATE `'.static::DB.'`.`'.static::TABLE.'` SET'.
+				'UPDATE `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values).
 				' WHERE '.join(' AND ', $keys);
 
@@ -150,7 +150,7 @@ class MOMCompound extends MOMBase
 		$where = self::buildCompoundWhere($ids, $context);
 
 		$sql = 
-			'SELECT * FROM `'.static::DB.'`.`'.static::TABLE.'`'.
+			'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE '.$where;
 
 		$res = NULL;

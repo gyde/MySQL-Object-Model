@@ -10,7 +10,7 @@ class MOMBaseException extends MOMException
 	  * Use $internalMessage for technical stuff
 	  */ 
 	const MISSING_DB_DEFINITION = 1;
-	const MESSAGE_1 = 'Missing database definition, please define const DB in extending class';
+	const MESSAGE_1 = 'Missing database definition, please define const DB in extending class or use setDbName()';
 	
 	const MISSING_TABLE_DEFINITION = 2;
 	const MESSAGE_2 = 'Missing table definition, please define const TABLE in extending class';
