@@ -1,6 +1,9 @@
 <?php
 namespace tests;
 
+use tests\classes\MOMSimpleActual;
+use tests\classes\MOMSimpleActual2;
+
 class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 {
 	static $connection = NULL;

@@ -1,6 +1,8 @@
 <?php
 namespace tests;
 
+use tests\classes\MOMCompoundActual;
+
 class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 {
 	static $connection = NULL;

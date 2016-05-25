@@ -1,5 +1,5 @@
 <?php
-namespace tests;
+namespace tests\classes;
 
 class MOMCompoundActual extends \MOMCompound
 {
