@@ -123,7 +123,7 @@ class MOMCompound extends MOMBase
 		{
 			if (!in_array($field['Field'], $compoundKeys) && 
 				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
-				$values[] = $this->escapeObjectPair($field['Field']);
+				$values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
 
 		}
 
@@ -175,12 +175,13 @@ class MOMCompound extends MOMBase
 	private function getKeyPairs()
 	{
 		$wheres = '';
+		$description = static::$__mbDescriptions[get_called_class()];
 		foreach (self::getCompoundKeys() as $key)
 		{
 			if (!isset($this->$key))
 				throw new BaseException(BaseException::COMPOUND_KEY_MISSING_VALUE, get_called_class().'->'.__FUNCTION__.' failed to save object to database, '.$key.' is not set on object');
 
-			$wheres[] = $this->escapeObjectPair($key);
+			$wheres[] = $this->escapeObjectPair($key, $description[$key]['Type']);
 		}
 
 		return $wheres;

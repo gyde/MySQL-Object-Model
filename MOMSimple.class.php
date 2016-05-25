@@ -167,7 +167,7 @@ class MOMSimple extends MOMBase
 			//Ensures that the primay key and mysql protected value defaults are not in values array
 			if ($field['Field'] !== $primaryKey && 
 				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
-				$values[] = $this->escapeObjectPair($field['Field']);
+				$values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
 
 			if ($field['Key'] == 'PRI' && $field['Extra'] == 'auto_increment')
 				$autoIncrement = TRUE;
