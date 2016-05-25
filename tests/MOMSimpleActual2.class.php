@@ -1,5 +1,5 @@
 <?php
-namespace /*NAMESPACE_SLASH*/tests;
+namespace tests;
 
 class MOMSimpleActual2 extends MOMSimpleActual
 {

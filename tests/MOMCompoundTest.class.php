@@ -1,5 +1,5 @@
 <?php
-namespace /*NAMESPACE_SLASH*/tests;
+namespace tests;
 
 class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 {
