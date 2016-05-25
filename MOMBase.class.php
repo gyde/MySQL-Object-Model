@@ -187,36 +187,19 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Get database name
+	  * Get database name defined using setDbName
+	  * This will backtrack extending classes 
 	  * @return string
 	  */
 	public static function getDbName()
 	{
 		if (is_array(static::$__mbDatabaseNames))
 		{
-			if (($name = self::getNestedDbName(get_called_class())) !== FALSE)
+			if (($name = self::getNestedByClass(self::$__mbDatabaseNames, get_called_class())) !== FALSE)
 				return $name;
 		}
 
 		return static::DB;
-	}
-
-	/**
-	  * Get database name defined using setDbName
-	  * This will backtrack extending classes 
-	  * Note, this method is recursive
-	  * @param string $class
-	  * @return string Will return FALSE if no db name is found
-	  */
-	protected static function getNestedDbName($class)
-	{
-		if (in_array($class, self::$__mbProtectedClasses))
-			return FALSE;
-
-		if (isset(self::$__mbDatabaseNames[$class]))
-			return self::$__mbDatabaseNames[$class];
-
-		return self::getNestedDbName(get_parent_class($class));
 	}
 
 	/**
@@ -623,14 +606,14 @@ abstract class MOMBase
 
 	/**
 	  * Set a database handler for the class
-	  * If called directly on MOMBase, connection is set globally
+	  * If called directly on MOM classes, connection is set globally
 	  * @param \mysqli $connection mysqli connection
 	  * @param bool $global set the mysqli connection globally
 	  */
 	public static function setConnection(\mysqli $connection, $global = FALSE)
 	{
 		$class = get_called_class();
-		if ($global || $class == __CLASS__)
+		if ($global || in_array($class, self::$__mbProtectedClasses) === TRUE)
 			static::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
 		else
 			static::$__mbConnections[$class] = $connection;
@@ -853,5 +836,23 @@ abstract class MOMBase
 
 		if (!defined('static::TABLE'))
 			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no TABLE constant defined');
+	}
+
+	/**
+	  * Get property based on class extentions hiarchy
+	  * This will backtrack extending classes 
+	  * Note, this method is recursive
+	  * @param string $class
+	  * @return string Will return FALSE if no property is found
+	  */
+	private static function getNestedByClass($properties, $class)
+	{
+		if (in_array($class, self::$__mbProtectedClasses))
+			return FALSE;
+
+		if (isset($properties[$class]))
+			return $properties[$class];
+
+		return self::getNestedByClass($properties, get_parent_class($class));
 	}
 }
