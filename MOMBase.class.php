@@ -441,7 +441,7 @@ abstract class MOMBase
 					if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
 						throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
 
-					$description[] = $row;
+					$description[$row['Field']] = $row;
 				}
 				self::$__mbDescriptions[$class] = $description;
 				self::setMemcacheEntry($selector, $description);
@@ -534,14 +534,19 @@ abstract class MOMBase
 	/**
 	  * Escape object value
 	  * Everything is escaped as strings except for NULL
-	  * TODO Optimize for int and other
 	  * @param string $field 
+	  * @param string $type
 	  * @return string
 	  */
-	protected function escapeObjectPair($field)
+	protected function escapeObjectPair($field, $type = 'varchar')
 	{
 		if ($this->$field !== NULL)
+		{
+			if (strpos('int', $type) !== FALSE)
+				return '`'.$field.'` = '.(int)$this->$field;
+
 			return '`'.$field.'` = '.$this->escapeObject($this->$field);
+		}
 		else
 			return '`'.$field.'` = NULL';
 	}
