@@ -595,9 +595,8 @@ abstract class MOMBase
 	  */
 	private static function getConnection()
 	{
-		$class = get_called_class();
-		if (isset(self::$__mbConnections[$class]))
-			return self::$__mbConnections[$class];
+		if (($connection = self::getNestedByClass(self::$__mbConnections, get_called_class())) !== FALSE)
+			return $connection;
 		else if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION]))
 			return self::$__mbConnections[self::GLOBAL_CONNECTION];
 		else
@@ -626,9 +625,8 @@ abstract class MOMBase
 	  */
 	private static function getMemcache()
 	{
-		$class = get_called_class();
-		if (isset(self::$__mbMemcaches[$class]))
-			return self::$__mbMemcaches[$class];
+		if (($memcache = self::getNestedByClass(self::$__mbConnections, get_called_class())) !== FALSE)
+			return $memcache;
 		else if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
 			return self::$__mbMemcaches[self::GLOBAL_MEMCACHE];
 		else
