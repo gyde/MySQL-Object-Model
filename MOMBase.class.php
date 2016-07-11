@@ -829,7 +829,7 @@ abstract class MOMBase
    	 */
 	protected static function checkDbAndTableConstants($classname)
 	{
-		if (!defined('static::DB') && self::getNestedDbName() === FALSE)
+		if (!defined('static::DB') && self::getDbName() === FALSE)
 			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB defined');
 
 		if (!defined('static::TABLE'))
