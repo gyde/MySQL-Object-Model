@@ -33,6 +33,12 @@ class MOMBaseException extends MOMException
 	const COMPOUND_KEY_MISSING_IN_WHERE = 8;
 	const MESSAGE_8 = 'When trying to select using a compound key, a value is missing in array where clause';
 
+	const CLASSNAME_IS_EMPTY = 9;
+	const MESSAGE_9 = 'Using class information resulted in a empty class name, please submit a bugfix request at MySql-Object-Model github';
+
+	const CLASSNAME_RECURSION_LEVEL_TO_DEEP = 10;
+	const MESSAGE_10 = 'When resursivly searching for properties within models, resursion level became to high';
+
 	const OBJECT_NOT_SAVED = 100;
 	const MESSAGE_100 = 'Object could not be saved (created/updated)'; 
 

@@ -84,11 +84,11 @@ abstract class MOMBase
 
 	/**
 	  * Names of all basic classes in MySQL-Object-Model
-	  * Used as stop words when searching static arrays for 
+	  * Used as stop words when searching static arrays for
 	  * nested extending class data
 	  * @var string[]
 	  */
-	protected static $__mbProtectedClasses = array('MOMBase','MOMSimple','MOMCompound');
+	protected static $__mbProtectedClasses = array('/*USE_NAMESPACE*/MOMBase','/*USE_NAMESPACE*/MOMSimple','/*USE_NAMESPACE*/MOMCompound');
 
 	/**
 	  * Static cache with all mysqli connections
@@ -187,7 +187,7 @@ abstract class MOMBase
 
 	/**
 	  * Get database name defined using setDbName
-	  * This will backtrack extending classes 
+	  * This will backtrack extending classes
 	  * @return string
 	  */
 	public static function getDbName()
@@ -397,7 +397,7 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Describes the class using DESCRIBE 
+	  * Describes the class using DESCRIBE
 	  * Caches model in static cache and in Memcache(if enabled)
 	  * Used when creating new objects, for default values and field info
 	  * Entry in memcache will be keyed using classname and CLASS_REVISION
@@ -635,7 +635,7 @@ abstract class MOMBase
 	/**
 	  * Set a memcache handler for the extending class
 	  * If called directly on MOMBase, connection is set globally
-	  * @param \Memcached $memcache 
+	  * @param \Memcached $memcache
 	  * @param int $expiration
 	  * @param bool $global set the memcache globally
 	  */
@@ -824,8 +824,7 @@ abstract class MOMBase
 	/**
 	  * Checks if the extending class has needed info to use MOMBase
 	  * @param string $classname classname of the extending class
-	
-   	 */
+	  */
 	protected static function checkDbAndTableConstants($classname)
 	{
 		if (!defined('static::DB') && self::getDbName() === FALSE)
@@ -837,19 +836,27 @@ abstract class MOMBase
 
 	/**
 	  * Get property based on class extentions hiarchy
-	  * This will backtrack extending classes 
+	  * This will backtrack extending classes
 	  * Note, this method is recursive
-	  * @param string $class
+	  * @param array<string, mixed> $properties array of properties to search in, string is class name
+	  * @param string $class name of class including namespace
+	  * @param int $iteration which level of recursion
 	  * @return string Will return FALSE if no property is found
 	  */
-	private static function getNestedByClass($properties, $class)
+	private static function getNestedByClass($properties, $class, $iteration = 0)
 	{
+		if (empty($class))
+			throw new BaseException(BaseException::CLASSNAME_IS_EMPTY, 'Trying to get nested property by class, but classname is empty');
+
+		if ($iteration > 100)
+			throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class.' did not match any properties (resulted in infinite loop)');
+
 		if (in_array($class, self::$__mbProtectedClasses))
 			return FALSE;
 
 		if (isset($properties[$class]))
 			return $properties[$class];
 
-		return self::getNestedByClass($properties, get_parent_class($class));
+		return self::getNestedByClass($properties, get_parent_class($class), ++$iteration);
 	}
 }

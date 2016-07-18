@@ -124,8 +124,10 @@ class MOMSimple extends MOMBase
 		$this->tryToSave($sql);
 		
 		$keyname = static::COLUMN_PRIMARY_KEY;
-		if ($this->__mbNewObject)
+		if ($this->__mbNewObject && $this->__mbConnection->insert_id != 0)
+		{
 			$id = $this->__mbConnection->insert_id;
+		}
 		else
 			$id = $this->$keyname;
 
