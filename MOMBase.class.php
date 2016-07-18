@@ -172,10 +172,9 @@ abstract class MOMBase
 
 	/**
 	  * Get a rows unique identifier, e.g. primary key, or a compound key
-	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	abstract protected static function getRowIdentifier($row);
+	abstract protected function getRowIdentifier();
 
 	/**
 	  * Set database name
@@ -293,7 +292,7 @@ abstract class MOMBase
 			$new = new static();
 			$new->fillByStatic($row);
 			if ($keyed)
-				$many[static::getRowIdentifier($row)] = $new;
+				$many[$new->getRowIdentifier()] = $new;
 			else
 				$many[] = $new;
 		}

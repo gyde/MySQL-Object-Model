@@ -30,6 +30,9 @@ class MOMBaseException extends MOMException
 	const COMPOUND_KEY_MISSING_VALUE = 7;
 	const MESSAGE_7 = 'When trying to build a compound key, a value is missing on the object';
 
+	const COMPOUND_KEY_MISSING_IN_WHERE = 8;
+	const MESSAGE_8 = 'When trying to select using a compound key, a value is missing in array where clause';
+
 	const OBJECT_NOT_SAVED = 100;
 	const MESSAGE_100 = 'Object could not be saved (created/updated)'; 
 

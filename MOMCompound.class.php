@@ -35,7 +35,7 @@ class MOMCompound extends MOMBase
 
 		$new = NULL;
 
-		if (($row = self::getRowByIds($ids, self::CONTEXT_STATIC)) !== NULL)
+		if (($row = self::getRowByIdsStatic($ids)) !== NULL)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
@@ -58,7 +58,7 @@ class MOMCompound extends MOMBase
 		foreach (self::getCompoundKeys() as $key)
 			$ids[$key] = $this->$key;
 
-		if (($row = self::getRowByIds($ids, self::CONTEXT_OBJECT)) === NULL)
+		if (($row = self::getRowByIds($ids)) === NULL)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
 			
 		$this->fillByObject($row);
@@ -145,23 +145,26 @@ class MOMCompound extends MOMBase
 	  * @throws MySQLException
 	  * @return resource(mysql resource) or NULL on failure
 	  */
-	private function getRowByIds($ids, $context)
+	private function getRowByIds($ids)
 	{
-		$where = self::buildCompoundWhere($ids, $context);
+		$sql = self::buildCompoundSql($ids, array($this, 'escapeObject'));
 
-		$sql = 
-			'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
-			' WHERE '.$where;
+		$res = $this->queryObject($sql);
 
-		$res = NULL;
-		if ($context == self::CONTEXT_STATIC)
-		{
-			$res = self::queryStatic($sql);
-		}
-		else if ($context == self::CONTEXT_OBJECT)
-		{
-			$res = $this->queryObject($sql);
-		}
+		return $row = $res->fetch_assoc();
+	}
+
+	/**
+	  * Get mysql row by primary key
+	  * @param mixed $id escaped
+	  * @throws MySQLException
+	  * @return resource(mysql resource) or NULL on failure
+	  */
+	private static function getRowByIdsStatic($ids)
+	{
+		$sql = self::buildCompoundSql($ids, array('MOMCompound','parent::escapeStatic'));
+
+		$res = self::queryStatic($sql);
 			
 		return $row = $res->fetch_assoc();
 	}
@@ -188,43 +191,41 @@ class MOMCompound extends MOMBase
 	}
 
 	/**
-	  * Build sql where statement used for fetching the object
+	  * Build sql statement used for fetching compound object
 	  * @param string[] $ids contains key => value pairs that make up the compound key
-	  * @param string $context
-	  * @return string
+	  * @param callback $callback
+	  * @return string sql statement
 	  */
-	private function buildCompoundWhere($ids, $context)
+	private static function buildCompoundSql($ids, $callback)
 	{
 		$wheres = array();
 		foreach (self::getCompoundKeys() as $key)
 		{
 			if (!array_key_exists($key, $ids))
-				throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class().'->'.__FUNCTION__.' failed to fetch object from database, '.$key.' is not present amount ids');
+				throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class().'->'.__FUNCTION__.' failed to fetch object from database, '.$key.' is not present amoung ids');
 
 			if ($ids[$key] !== NULL)
-			{
-				if ($context == self::CONTEXT_STATIC)
-					$wheres[] = '`'.$key.'` = '.self::escapeStatic($ids[$key]);
-				else if ($context == self::CONTEXT_OBJECT)
-					$wheres[] = '`'.$key.'` = '.$this->escapeObject($ids[$key]);
-			}
+				$wheres[] = '`'.$key.'` = '.call_user_func($callback, $ids[$key]);
 			else
 				$wheres[] = '`'.$key.'` = NULL';
 		}
 
-		return join(' AND ', $wheres);
+		$sql =
+			'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
+			' WHERE '.join(' AND ', $wheres);
+
+		return $sql;
 	}
 
 	/**
 	  * Get a rows unique identifier, e.g. primary key, or a compound key
-	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	protected static function getRowIdentifier($row)
+	protected function getRowIdentifier()
 	{
 		$identifier = '';
 		foreach (self::getCompoundKeys() as $key)
-			$identifier .= $row[$key];
+			$identifier .= $this->{$key};
 	
 		return $identifier;
 	}
