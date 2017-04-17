@@ -456,9 +456,10 @@ abstract class MOMBase
 	/**
 	 * Returns an array of constant values based on $prefix
 	 * @param string $prefix
-	 * @return array Key: constant name. Value: constant value
+	 * @param bool $keyed if true return CONST => VALUE, otherwise VALUE => VALUE
+	 * @return array<string,string>
 	 */
-	protected static function getConstants($prefix)
+	protected static function getConstants($prefix, $keyed = TRUE)
 	{
 		$reflection = new \ReflectionClass(get_called_class());
 		$constants = $reflection->getConstants();
@@ -467,7 +468,12 @@ abstract class MOMBase
 		foreach ($constants as $name => $value)
 		{
 			if (strpos($name, $prefix) === 0)
-				$values[$name] = $value;
+			{
+				if ($keyed)
+					$values[$name] = $value;
+				else
+					$values[$value] = $value;
+			}
 		}
 
 		return $values;
