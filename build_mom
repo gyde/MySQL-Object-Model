@@ -9,12 +9,19 @@ if [ -z $1 ]; then
 	exit 1
 fi
 
-if [ ! -d "build" ]; then
-	mkdir build;
+BUILD_DIR=build;
+if [ $# -eq 2 ]; then
+	BUILD_DIR=$2;
+fi
+
+echo ${BUILD_DIR}
+
+if [ ! -d "${BUILD_DIR}" ]; then
+	mkdir -p ${BUILD_DIR};
 fi
 
 echo "Building MySQL-Object-Model with namespace: $1"
 
 for a in MOM*.class.php; do
-	sed 's/\/\*NAMESPACE\*\//namespace '$1';/g' $a | sed 's/\/\*USE_NAMESPACE\*\//'$1'\\/g' > build/$a
+	sed 's/\/\*NAMESPACE\*\//namespace '$1';/g' $a | sed 's/\/\*USE_NAMESPACE\*\//'$1'\\/g' > ${BUILD_DIR}/$a
 done
