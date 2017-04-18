@@ -600,12 +600,14 @@ abstract class MOMBase
 	  */
 	private static function getConnection()
 	{
-		if (($connection = self::getNestedByClass(self::$__mbConnections, get_called_class())) !== FALSE)
+		$connection = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		if ($connection !== FALSE)
 			return $connection;
-		else if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION]))
+
+		if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION]))
 			return self::$__mbConnections[self::GLOBAL_CONNECTION];
-		else
-			throw new BaseException(BaseException::MISSING_CONNECTION);
+
+		throw new BaseException(BaseException::MISSING_CONNECTION);
 	}
 
 	/**
@@ -618,9 +620,9 @@ abstract class MOMBase
 	{
 		$class = get_called_class();
 		if ($global || in_array($class, self::$__mbProtectedClasses) === TRUE)
-			static::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
+			self::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
 		else
-			static::$__mbConnections[$class] = $connection;
+			self::$__mbConnections[$class] = $connection;
 	}
 
 	/**
@@ -854,15 +856,17 @@ abstract class MOMBase
 		if (empty($class))
 			throw new BaseException(BaseException::CLASSNAME_IS_EMPTY, 'Trying to get nested property by class, but classname is empty');
 
-		if ($iteration > 100)
-			throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class.' did not match any properties (resulted in infinite loop)');
-
-		if (in_array($class, self::$__mbProtectedClasses))
-			return FALSE;
-
 		if (isset($properties[$class]))
 			return $properties[$class];
 
-		return self::getNestedByClass($properties, get_parent_class($class), ++$iteration);
+		// class has no parent (top of hierarki)
+		$class = get_parent_class($class);
+		if ($class === FALSE)
+			return FALSE;
+
+		if ($iteration > 100)
+			throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class.' did not match any properties (resulted in infinite loop)');
+
+		return self::getNestedByClass($properties, $class, ++$iteration);
 	}
 }
