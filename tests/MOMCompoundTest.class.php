@@ -29,7 +29,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 			$res = self::$connection->query($sql);
 			if ($res !== FALSE)
 			{
-				\MOMBase::setConnection(self::$connection, TRUE);
+				\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
 			}
 			else
 			{
@@ -46,7 +46,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
 		if (self::$memcache !== FALSE)
 		{
-			\MOMBase::setMemcache(self::$memcache, 300);
+			\tests\mom\MOMBase::setMemcache(self::$memcache, 300);
 		}
 		else
 		{

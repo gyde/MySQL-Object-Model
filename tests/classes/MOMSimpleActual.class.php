@@ -1,7 +1,7 @@
 <?php
 namespace tests\classes;
 
-class MOMSimpleActual extends \MOMSimple
+class MOMSimpleActual extends \tests\mom\MOMSimple
 {
 	const DB = 'mom';
 	const TABLE = 'mom_simple_test';
