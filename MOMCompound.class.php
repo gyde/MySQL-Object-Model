@@ -162,7 +162,7 @@ class MOMCompound extends MOMBase
 	  */
 	private static function getRowByIdsStatic($ids)
 	{
-		$sql = self::buildCompoundSql($ids, array('MOMCompound','parent::escapeStatic'));
+		$sql = self::buildCompoundSql($ids, 'self::escapeStatic');
 
 		$res = self::queryStatic($sql);
 			
