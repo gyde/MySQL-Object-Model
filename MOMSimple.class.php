@@ -48,7 +48,7 @@ class MOMSimple extends MOMBase
 		// early return from memcache
 		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
 		{
-			self::setStaticEntry($selector, $value);
+			self::setStaticEntry($selector, $entry);
 			return $entry;
 		}
 
