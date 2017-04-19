@@ -632,12 +632,14 @@ abstract class MOMBase
 	  */
 	private static function getMemcache()
 	{
-		if (($memcache = self::getNestedByClass(self::$__mbConnections, get_called_class())) !== FALSE)
+		$memcache = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		if ($memcache !== FALSE)
 			return $memcache;
-		else if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
+
+		if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
 			return self::$__mbMemcaches[self::GLOBAL_MEMCACHE];
-		else
-			return FALSE;
+
+		return FALSE;
 	}
 
 	/**
@@ -760,7 +762,6 @@ abstract class MOMBase
 			{
 				if ($value->__mbMemcache !== FALSE)
 					$value->__mbMemcache['memcache']->set(self::getMemcacheKey($selector), $value, $value->__mbMemcache['expiration']);
-
 			}
 		}
 	}
