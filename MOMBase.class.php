@@ -199,7 +199,7 @@ abstract class MOMBase
 		}
 
 		if (!defined('static::DB'))
-			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no DB defined');
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, get_called_class().' has no DB defined');
 
 		return static::DB;
 	}
