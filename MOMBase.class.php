@@ -198,6 +198,9 @@ abstract class MOMBase
 				return $name;
 		}
 
+		if (!defined('static::DB'))
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no DB defined');
+
 		return static::DB;
 	}
 
@@ -837,10 +840,10 @@ abstract class MOMBase
 	protected static function checkDbAndTableConstants($classname)
 	{
 		if (!defined('static::DB') && self::getDbName() === FALSE)
-			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB defined');
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no DB defined');
 
 		if (!defined('static::TABLE'))
-			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no TABLE constant defined');
+			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no TABLE constant defined');
 	}
 
 	/**
