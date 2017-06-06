@@ -48,12 +48,12 @@ class MOMSimple extends MOMBase
 		// early return from memcache
 		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
 		{
-			self::setStaticEntry($selector, $value);
+			self::setStaticEntry($selector, $entry);
 			return $entry;
 		}
 
 		$new = NULL;
-		if (($row = self::getRowById($id, self::CONTEXT_STATIC)) !== NULL)
+		if (($row = self::getRowByIdStatic($id)) !== NULL)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
@@ -77,28 +77,40 @@ class MOMSimple extends MOMBase
 	  * @throws MySQLException
 	  * @return resource(mysql resource) or NULL on failure
 	  */
-	private function getRowById($id, $context)
+	private function getRowById($id)
 	{
-		if ($context == self::CONTEXT_STATIC)
-			$id = self::escapeStatic($id);
-		else if ($context == self::CONTEXT_OBJECT)
-			$id = $this->escapeObject($id);
+		$id = $this->escapeObject($id);
+		$sql = self::getRowByIdSelect($id);
+		$res = $this->queryObject($sql);
 
-		$sql = 
+		return $row = $res->fetch_assoc();
+	}
+
+	/**
+	  * Get mysql row by primary key
+	  * @param mixed $id escaped
+	  * @throws MySQLException
+	  * @return resource(mysql resource) or NULL on failure
+	  */
+	private static function getRowByIdStatic($id)
+	{
+		$id = self::escapeStatic($id);
+		$sql = self::getRowByIdSelect($id);
+		$res = self::queryStatic($sql);
+			
+		return $row = $res->fetch_assoc();
+	}
+
+	/**
+	  * Get SELECT statement for get by id
+	  * @param mixed $id escaped primary key value
+	  * @return string
+	  */
+	private static function getRowByIdSelect($id)
+	{
+		return
 			'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$id;
-
-		$res = NULL;
-		if ($context == self::CONTEXT_STATIC)
-		{
-			$res = self::queryStatic($sql);
-		}
-		else if ($context == self::CONTEXT_OBJECT)
-		{
-			$res = $this->queryObject($sql);
-		}
-			
-		return $res->fetch_assoc();
 	}
 
 	/**
@@ -112,12 +124,14 @@ class MOMSimple extends MOMBase
 		$this->tryToSave($sql);
 		
 		$keyname = static::COLUMN_PRIMARY_KEY;
-		if ($this->__mbNewObject)
+		if ($this->__mbNewObject && $this->__mbConnection->insert_id != 0)
+		{
 			$id = $this->__mbConnection->insert_id;
+		}
 		else
 			$id = $this->$keyname;
 
-		if (($row = self::getRowById($id, self::CONTEXT_OBJECT)) === NULL)
+		if (($row = self::getRowById($id)) === NULL)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with metadata from database');
 		
 		$this->fillByObject($row);
@@ -195,12 +209,11 @@ class MOMSimple extends MOMBase
 
 	/**
 	  * Get a rows unique identifier, e.g. primary key
-	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	protected static function getRowIdentifier($row)
+	protected function getRowIdentifier()
 	{
-		return $row[static::COLUMN_PRIMARY_KEY];
+		return $this->{static::COLUMN_PRIMARY_KEY};
 	}
 
 	/**

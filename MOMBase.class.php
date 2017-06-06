@@ -84,11 +84,11 @@ abstract class MOMBase
 
 	/**
 	  * Names of all basic classes in MySQL-Object-Model
-	  * Used as stop words when searching static arrays for 
+	  * Used as stop words when searching static arrays for
 	  * nested extending class data
 	  * @var string[]
 	  */
-	protected static $__mbProtectedClasses = array('MOMBase','MOMSimple','MOMCompound');
+	protected static $__mbProtectedClasses = array('/*USE_NAMESPACE*/MOMBase','/*USE_NAMESPACE*/MOMSimple','/*USE_NAMESPACE*/MOMCompound');
 
 	/**
 	  * Static cache with all mysqli connections
@@ -172,10 +172,9 @@ abstract class MOMBase
 
 	/**
 	  * Get a rows unique identifier, e.g. primary key, or a compound key
-	  * @param string[] $row mysqli_result->fetch_assoc
 	  * @return string
 	  */
-	abstract protected static function getRowIdentifier($row);
+	abstract protected function getRowIdentifier();
 
 	/**
 	  * Set database name
@@ -187,36 +186,22 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Get database name
+	  * Get database name defined using setDbName
+	  * This will backtrack extending classes
 	  * @return string
 	  */
 	public static function getDbName()
 	{
 		if (is_array(static::$__mbDatabaseNames))
 		{
-			if (($name = self::getNestedDbName(get_called_class())) !== FALSE)
+			if (($name = self::getNestedByClass(self::$__mbDatabaseNames, get_called_class())) !== FALSE)
 				return $name;
 		}
 
+		if (!defined('static::DB'))
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, get_called_class().' has no DB defined');
+
 		return static::DB;
-	}
-
-	/**
-	  * Get database name defined using setDbName
-	  * This will backtrack extending classes 
-	  * Note, this method is recursive
-	  * @param string $class
-	  * @return string Will return FALSE if no db name is found
-	  */
-	protected static function getNestedDbName($class)
-	{
-		if (in_array($class, self::$__mbProtectedClasses))
-			return FALSE;
-
-		if (isset(self::$__mbDatabaseNames[$class]))
-			return self::$__mbDatabaseNames[$class];
-
-		return self::getNestedDbName(get_parent_class($class));
 	}
 
 	/**
@@ -310,7 +295,7 @@ abstract class MOMBase
 			$new = new static();
 			$new->fillByStatic($row);
 			if ($keyed)
-				$many[static::getRowIdentifier($row)] = $new;
+				$many[$new->getRowIdentifier()] = $new;
 			else
 				$many[] = $new;
 		}
@@ -415,7 +400,7 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Describes the class using DESCRIBE 
+	  * Describes the class using DESCRIBE
 	  * Caches model in static cache and in Memcache(if enabled)
 	  * Used when creating new objects, for default values and field info
 	  * Entry in memcache will be keyed using classname and CLASS_REVISION
@@ -450,6 +435,23 @@ abstract class MOMBase
 	}
 
 	/**
+	  * Get database fields from sql DESCRIBE
+	  * @return string[]
+	  */
+	protected function getFields()
+	{
+		$description = $this->describe(get_called_class());
+
+		$fields = [];
+		foreach ($description as $field)
+		{
+			$fields[] = $field['Field'];
+		}
+
+		return $fields;
+	}
+
+	/**
 	 * Return if $value is valid with respect to constants with $prefix
 	 * @param string $preFix
 	 * @param mixed $value
@@ -474,9 +476,10 @@ abstract class MOMBase
 	/**
 	 * Returns an array of constant values based on $prefix
 	 * @param string $prefix
-	 * @return array Key: constant name. Value: constant value
+	 * @param bool $keyed if true return CONST => VALUE, otherwise VALUE => VALUE
+	 * @return array<string,string>
 	 */
-	protected static function getConstants($prefix)
+	protected static function getConstants($prefix, $keyed = TRUE)
 	{
 		$reflection = new \ReflectionClass(get_called_class());
 		$constants = $reflection->getConstants();
@@ -485,7 +488,12 @@ abstract class MOMBase
 		foreach ($constants as $name => $value)
 		{
 			if (strpos($name, $prefix) === 0)
-				$values[$name] = $value;
+			{
+				if ($keyed)
+					$values[$name] = $value;
+				else
+					$values[$value] = $value;
+			}
 		}
 
 		return $values;
@@ -612,28 +620,29 @@ abstract class MOMBase
 	  */
 	private static function getConnection()
 	{
-		$class = get_called_class();
-		if (isset(self::$__mbConnections[$class]))
-			return self::$__mbConnections[$class];
-		else if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION]))
+		$connection = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		if ($connection !== FALSE)
+			return $connection;
+
+		if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION]))
 			return self::$__mbConnections[self::GLOBAL_CONNECTION];
-		else
-			throw new BaseException(BaseException::MISSING_CONNECTION);
+
+		throw new BaseException(BaseException::MISSING_CONNECTION);
 	}
 
 	/**
 	  * Set a database handler for the class
-	  * If called directly on MOMBase, connection is set globally
+	  * If called directly on MOM classes, connection is set globally
 	  * @param \mysqli $connection mysqli connection
 	  * @param bool $global set the mysqli connection globally
 	  */
 	public static function setConnection(\mysqli $connection, $global = FALSE)
 	{
 		$class = get_called_class();
-		if ($global || $class == __CLASS__)
-			static::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
+		if ($global || in_array($class, self::$__mbProtectedClasses) === TRUE)
+			self::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
 		else
-			static::$__mbConnections[$class] = $connection;
+			self::$__mbConnections[$class] = $connection;
 	}
 
 	/**
@@ -643,19 +652,20 @@ abstract class MOMBase
 	  */
 	private static function getMemcache()
 	{
-		$class = get_called_class();
-		if (isset(self::$__mbMemcaches[$class]))
-			return self::$__mbMemcaches[$class];
-		else if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
+		$memcache = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		if ($memcache !== FALSE)
+			return $memcache;
+
+		if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE]))
 			return self::$__mbMemcaches[self::GLOBAL_MEMCACHE];
-		else
-			return FALSE;
+
+		return FALSE;
 	}
 
 	/**
 	  * Set a memcache handler for the extending class
 	  * If called directly on MOMBase, connection is set globally
-	  * @param \Memcached $memcache 
+	  * @param \Memcached $memcache
 	  * @param int $expiration
 	  * @param bool $global set the memcache globally
 	  */
@@ -772,7 +782,6 @@ abstract class MOMBase
 			{
 				if ($value->__mbMemcache !== FALSE)
 					$value->__mbMemcache['memcache']->set(self::getMemcacheKey($selector), $value, $value->__mbMemcache['expiration']);
-
 			}
 		}
 	}
@@ -844,14 +853,41 @@ abstract class MOMBase
 	/**
 	  * Checks if the extending class has needed info to use MOMBase
 	  * @param string $classname classname of the extending class
-	
-   	 */
+	  */
 	protected static function checkDbAndTableConstants($classname)
 	{
-		if (!defined('static::DB') && self::getNestedDbName() === FALSE)
-			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no DB defined');
+		if (!defined('static::DB') && self::getDbName() === FALSE)
+			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no DB defined');
 
 		if (!defined('static::TABLE'))
-			throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname.' has no TABLE constant defined');
+			throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname.' has no TABLE constant defined');
+	}
+
+	/**
+	  * Get property based on class extentions hiarchy
+	  * This will backtrack extending classes
+	  * Note, this method is recursive
+	  * @param array<string, mixed> $properties array of properties to search in, string is class name
+	  * @param string $class name of class including namespace
+	  * @param int $iteration which level of recursion
+	  * @return string Will return FALSE if no property is found
+	  */
+	private static function getNestedByClass($properties, $class, $iteration = 0)
+	{
+		if (empty($class))
+			throw new BaseException(BaseException::CLASSNAME_IS_EMPTY, 'Trying to get nested property by class, but classname is empty');
+
+		if (isset($properties[$class]))
+			return $properties[$class];
+
+		// class has no parent (top of hierarki)
+		$class = get_parent_class($class);
+		if ($class === FALSE)
+			return FALSE;
+
+		if ($iteration > 100)
+			throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class.' did not match any properties (resulted in infinite loop)');
+
+		return self::getNestedByClass($properties, $class, ++$iteration);
 	}
 }

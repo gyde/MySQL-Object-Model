@@ -1,3 +1,4 @@
 *.swp
 run_tests
 build
+tests/mom

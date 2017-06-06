@@ -1,15 +1,15 @@
 <?php
-namespace /*NAMESPACE_SLASH*/tests;
+namespace tests\classes;
 
-class MOMCompoundActual extends \MOMCompound
+class MOMSimpleActual extends \tests\mom\MOMSimple
 {
 	const DB = 'mom';
-	const TABLE = 'mom_compound_test';
+	const TABLE = 'mom_simple_test';
 
-	const COLUMN_COMPOUND_KEYS = 'key1,key2,key3';
-	const COLUMN_KEY1 = 'key1';
-	const COLUMN_KEY2 = 'key2';
-	const COLUMN_KEY3 = 'key3';
+	const USE_STATIC_CACHE = TRUE;
+	const USE_MEMCACHE = TRUE;
+
+	const COLUMN_PRIMARY_KEY = 'primary_key';
 	const COLUMN_DEFAULT_VALUE = 'state';
 	const COLUMN_UPDATED = 'updated';
 	const COLUMN_UNIQUE = 'unique';
