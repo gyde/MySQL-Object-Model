@@ -435,6 +435,23 @@ abstract class MOMBase
 	}
 
 	/**
+	  * Get database fields from sql DESCRIBE
+	  * @return string[]
+	  */
+	protected function getFields()
+	{
+		$description = $this->describe(get_called_class());
+
+		$fields = [];
+		foreach ($description as $field)
+		{
+			$fields[] = $field['Field'];
+		}
+
+		return $fields;
+	}
+
+	/**
 	 * Return if $value is valid with respect to constants with $prefix
 	 * @param string $preFix
 	 * @param mixed $value
