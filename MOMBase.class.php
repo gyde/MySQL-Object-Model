@@ -443,7 +443,7 @@ abstract class MOMBase
 		$description = $this->describe(get_called_class());
 
 		$fields = [];
-		foreach ($description as $field)
+		foreach (self::$__mbDescriptions[$class] as $field)
 		{
 			$fields[] = $field['Field'];
 		}
