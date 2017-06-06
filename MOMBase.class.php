@@ -440,10 +440,8 @@ abstract class MOMBase
 	  */
 	protected function getFields()
 	{
-		$description = $this->describe(get_called_class());
-
 		$fields = [];
-		foreach (self::$__mbDescriptions[$class] as $field)
+		foreach (self::$__mbDescriptions[get_called_class()] as $field)
 		{
 			$fields[] = $field['Field'];
 		}
