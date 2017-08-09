@@ -9,12 +9,14 @@ class MOMCompound extends MOMBase
 	/**
 	  * Constructs an object of the extending class using parent constructor
 	  * Checks if compound keys has been defined on the extending class
-	  * @param \mysqli $connection mysqli connection
+	  * @param \PDO $connection PDO connection
+	  * @param \memcached $memcache memcache connection
+	  * @param int $memcacheExpiration memcache expiration in seconds
 	  */
-	public function __construct(\mysqli $connection = NULL)
+	public function __construct(\PDO $connection = NULL, \Memcached $memcache = NULL, $memcacheExpiration = 0)
 	{
 		self::hasCompoundKeys();
-		parent::__construct($connection);
+		parent::__construct($connection, $memcache, $memcacheExpiration);
 	}
 
 	/**
@@ -35,7 +37,7 @@ class MOMCompound extends MOMBase
 
 		$new = NULL;
 
-		if (($row = self::getRowByIdsStatic($ids)) !== NULL)
+		if (($row = self::getRowByIdsStatic($ids)) !== false)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
@@ -60,7 +62,7 @@ class MOMCompound extends MOMBase
 
 		if (($row = self::getRowByIds($ids)) === NULL)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
-			
+
 		$this->fillByObject($row);
 	}
 
@@ -73,7 +75,7 @@ class MOMCompound extends MOMBase
 	{
 		$keys = $this->getKeyPairs();
 
-		$sql = 
+		$sql =
 			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE '.join(' AND ', $keys);
 
@@ -93,13 +95,13 @@ class MOMCompound extends MOMBase
 		{
 			$values = array_merge($keys, $values);
 
-			$sql = 
+			$sql =
 				'INSERT INTO `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values);
 		}
 		else
 		{
-			$sql = 
+			$sql =
 				'UPDATE `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values).
 				' WHERE '.join(' AND ', $keys);
@@ -121,7 +123,7 @@ class MOMCompound extends MOMBase
 		$compoundKeys = self::getCompoundKeys();
 		foreach (static::$__mbDescriptions[get_called_class()] as $field)
 		{
-			if (!in_array($field['Field'], $compoundKeys) && 
+			if (!in_array($field['Field'], $compoundKeys) &&
 				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
 				$values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
 
@@ -151,7 +153,7 @@ class MOMCompound extends MOMBase
 
 		$res = $this->queryObject($sql);
 
-		return $row = $res->fetch_assoc();
+		return $res->fetch();
 	}
 
 	/**
@@ -165,8 +167,8 @@ class MOMCompound extends MOMBase
 		$sql = self::buildCompoundSql($ids, 'self::escapeStatic');
 
 		$res = self::queryStatic($sql);
-			
-		return $row = $res->fetch_assoc();
+
+		return $res->fetch();
 	}
 
 	/**
@@ -226,7 +228,7 @@ class MOMCompound extends MOMBase
 		$identifier = '';
 		foreach (self::getCompoundKeys() as $key)
 			$identifier .= $this->{$key};
-	
+
 		return $identifier;
 	}
 

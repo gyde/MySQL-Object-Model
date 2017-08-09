@@ -12,11 +12,12 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 
 	public static function setUpBeforeClass()
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
-		if (self::$connection !== FALSE && self::$connection->connect_errno == 0)
+		try 
 		{
-			$sql =
-				'CREATE TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.' ('.
+			self::$connection = Util::getConnection();
+			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+			$sqls[] = 'DROP TABLE IF EXISTS '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.';';
+			$sqls[] = 'CREATE TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.' ('.
 				' `'.MOMCompoundActual::COLUMN_KEY1.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.MOMCompoundActual::COLUMN_KEY2.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.MOMCompoundActual::COLUMN_KEY3.'` INT(10) UNSIGNED NOT NULL'.
@@ -26,21 +27,15 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 				', PRIMARY KEY (`'.MOMCompoundActual::COLUMN_KEY1.'`,`'.MOMCompoundActual::COLUMN_KEY2.'`,`'.MOMCompoundActual::COLUMN_KEY3.'`)'.
 				') ENGINE = MYISAM;';
 
-			$res = self::$connection->query($sql);
-			if ($res !== FALSE)
+			foreach ($sqls as $sql)
 			{
-				\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+				$res = self::$connection->exec($sql);
 			}
-			else
-			{
-				self::$skipTestsMessage = self::$connection->error;
-				self::$skipTests = TRUE;
-			}
-
 		}
-		else
+		catch (\PDOException $e)
 		{
 			self::$skipTests = TRUE;
+			self::$skipTestsMessage = $e->getMessage();
 		}
 
 		self::$memcache = Util::getMemcache();
@@ -49,12 +44,12 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 
 	public static function tearDownAfterClass()
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
+		self::$connection = Util::getConnection();
 		$sql =
 			'DROP TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE;
 
 		self::$connection->query($sql);
-		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
 		self::$memcache->flush();
 	}
 

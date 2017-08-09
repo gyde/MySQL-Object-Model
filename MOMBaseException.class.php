@@ -16,7 +16,7 @@ class MOMBaseException extends MOMException
 	const MESSAGE_2 = 'Missing table definition, please define const TABLE in extending class';
 
 	const MISSING_CONNECTION = 3;
-	const MESSAGE_3 = 'Missing mysqli connection, please set one using ::setConnection(mysqli) or ::construct(mysqli)' ;
+	const MESSAGE_3 = 'Missing PDO connection, please set one using ::setConnection(\PDO) or ::construct(\PDO)' ;
 	
 	const PRIMARY_KEY_NOT_DEFINED = 4;
 	const MESSAGE_4 = 'Missing primary key definition, please define const COLUMN_PRIMARY_KEY in extending class';

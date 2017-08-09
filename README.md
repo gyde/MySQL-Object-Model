@@ -1,12 +1,12 @@
 # MySQL-Obejct-Model
 
-A PHP Object Model using MySQL as backend via Mysqli. Allows fast scaffoling of Models with a high performance MySQL specific backend.
-First version will be available soon, then more information regarding installation, use and namespacing will follow.
+A PHP Object Model using MySQL as backend via PDO. Allows fast scaffoling of Models with a high performance MySQL specific backend.
+First version is available, then more information regarding installation, use and namespacing will follow.
 Memcache and Static cache has been added for MOMBase and MOMSimple
 
-## Version - Alpha Testing
-This project is currently begin used in small projects by myself, and is far from production ready / stable.
-Use at own RISK.
+## Version - beta
+This project is currently begin used in small and medium projects by myself, Solaris (scout group), IT-Infrastructure @ Roskilde-festival and is considered quite stable.
+No guareentes are given when using this code, but all suggestions and bugreports are welcome.
 
 ## Usage
 A simple example on the usage of MOMSimple
@@ -23,12 +23,12 @@ class MyTable extends \namespace\MOMSimple
 	const COLUMN_NAME = 'name';
 }
 
-$connection = new \mysqli('127.0.0.1', 'myuser', 'mypasswd');
+$connection = new \PDO('mysql:host=127.0.0.1', 'myuser', 'mypasswd');
 
-// Sets a global mysqli connection for MOMBase to use
+// Sets a global PDO connection for MOMBase to use
 \namespace\MOMBase::setConnection($connection, TRUE);
 
-// Sets a specific mysqli connection for MyTable to use
+// Sets a specific PDO connection for MyTable to use
 MyTable::setConnection($connection);
 
 // Create a new object
@@ -88,9 +88,9 @@ Inorder to run the tests, the following needs to be satisfied:
 
 ```sh
 export MEMCACHE_HOST="YOUR_HOST"
-export MYSQLI_HOST="YOUR_HOST"
-export MYSQLI_USERNAME="YOUR_USERNAME"
-export MYSQLI_PASSWD="YOUR_PASSWORD"
+export MYSQL_HOST="YOUR_HOST"
+export MYSQL_USERNAME="YOUR_USERNAME"
+export MYSQL_PASSWD="YOUR_PASSWORD"
 
 ./phpunit-4.8.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
 ```
@@ -98,4 +98,7 @@ export MYSQLI_PASSWD="YOUR_PASSWORD"
 ## Tools 
 ### build_mom 
 Shell script to "build" MOM using first providede argument as namespace.
-Will be placed in a folder called build
+```sh
+./build_mom \\\\my\\\\name\\\\space
+```
+MOM files will be placed in a folder called build

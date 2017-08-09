@@ -15,19 +15,17 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
 	public static function setUpBeforeClass()
 	{
 		FooBar::setDbName('mom');
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
-		if (self::$connection !== FALSE && self::$connection->connect_errno == 0)
+		try 
 		{
+			self::$connection = Util::getConnection();
+			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
 			self::createTable(Foo::getDbName(), Foo::TABLE, Foo::COLUMN_PRIMARY_KEY);
 			self::createTable(Bar::getDbName(), Bar::TABLE, Bar::COLUMN_PRIMARY_KEY);
-
-			if (!self::$skipTests)
-				\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
 		}
-		else
+		catch (\PDOException $e)
 		{
 			self::$skipTests = TRUE;
-			self::$skipTestsMessage = self::$connection->error;
+			self::$skipTestsMessage = $e->getMessage();
 		}
 
 		self::$memcache = Util::getMemcache();
@@ -36,25 +34,23 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
 
 	private static function createTable($dbName, $tableName, $primaryKey)
 	{
-		$sql =
-			'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
+		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.';';
+		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.$primaryKey.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `state` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 			', `updated` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 			', `unique` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 			') ENGINE = InnoDB;';
 
-		$res = self::$connection->query($sql);
-		if ($res === FALSE)
+		foreach ($sqls as $sql)
 		{
-			self::$skipTestsMessage = self::$connection->error;
-			self::$skipTests = TRUE;
+			$res = self::$connection->exec($sql);
 		}
 	}
 
 	public static function tearDownAfterClass()
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
+		self::$connection = Util::getConnection();
 		$sqls[] =
 			'DROP TABLE `'.Foo::getDbName().'`.`'.Foo::TABLE.'`';
 		$sqls[] =
@@ -62,7 +58,7 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
 
 		foreach ($sqls as $sql)
 			self::$connection->query($sql);
-		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
 		self::$memcache->flush();
 	}
 

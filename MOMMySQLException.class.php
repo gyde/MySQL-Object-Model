@@ -13,7 +13,6 @@ class MOMMySQLException extends \Exception
 
 	/**
 	  * Constructs a MOMMySQLException containing mysql error info
-	  * WHY: Using mysqli exception mode (MYSQLI_REPORT_STRICT) seemed to affected mysqli-driver globally
 	  * @param string $mysqlQuery
 	  * @param string $mysqlError
 	  * @param int $mysqlErrno Mysql Error Code

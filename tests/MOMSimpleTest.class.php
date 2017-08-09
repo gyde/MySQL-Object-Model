@@ -13,19 +13,15 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	public static function setUpBeforeClass()
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
-		if (self::$connection !== FALSE && self::$connection->connect_errno == 0)
+		try 
 		{
-			self::createTable(MOMSimpleActual::DB, MOMSimpleActual::TABLE);
-			self::createTable(MOMSimpleActual2::DB.'2', MOMSimpleActual2::TABLE);
-
-			if (!self::$skipTests)
-				\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
-		}
-		else
+			self::$connection = Util::getConnection();
+			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+			self::createTable(MOMSimpleActual::DB, MOMSimpleActual::TABLE); self::createTable(MOMSimpleActual2::DB.'2', MOMSimpleActual2::TABLE); }
+		catch (\PDOException $e)
 		{
 			self::$skipTests = TRUE;
-			self::$skipTestsMessage = self::$connection->error;
+			self::$skipTestsMessage = $e->getMessage();
 		}
 
 		self::$memcache = Util::getMemcache();
@@ -34,25 +30,23 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	private static function createTable($dbName, $tableName)
 	{
-		$sql =
-			'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
+		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.';';
+		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 			', `'.MOMSimpleActual::COLUMN_UPDATED.'` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 			', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 			') ENGINE = MYISAM;';
 
-		$res = self::$connection->query($sql);
-		if ($res === FALSE)
+		foreach ($sqls as $sql)
 		{
-			self::$skipTestsMessage = self::$connection->error;
-			self::$skipTests = TRUE;
+			$res = self::$connection->exec($sql);
 		}
 	}
 
 	public static function tearDownAfterClass()
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
+		self::$connection = Util::getConnection();
 		$sqls[] =
 			'DROP TABLE `'.MOMSimpleActual::DB.'`.`'.MOMSimpleActual::TABLE.'`';
 		$sqls[] =
@@ -60,7 +54,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		foreach ($sqls as $sql)
 			self::$connection->query($sql);
-		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
 		self::$memcache->flush();
 	}
 
@@ -77,14 +71,14 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 	{
 		$object1 = new MOMSimpleActual();
 		$object1->unique = uniqid();
-		$this->assertEquals($object1->getMemcacheTimestamp(), 0);
+		$this->assertEquals($object1->getSerializeTimestamp(), 0);
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
-		$this->assertGreaterThan(0, $object1->getMemcacheTimestamp()); 
+		$this->assertGreaterThan(0, $object1->getSerializeTimestamp()); 
 
 		$object2 = MOMSimpleActual::getById($object1->primary_key);
-		$this->assertGreaterThan(0, $object2->getMemcacheTimestamp()); 
-		$this->assertEquals($object1->getMemcacheTimestamp(), $object2->getMemcacheTimestamp());
+		$this->assertGreaterThan(0, $object2->getSerializeTimestamp()); 
+		$this->assertEquals($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
 		$this->assertEquals($object1->primary_key, $object2->primary_key);
 		$this->assertEquals($object1->state, $object2->state);
 		$this->assertEquals($object1->updated, $object2->updated);
@@ -97,8 +91,8 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$object3->unique = uniqid();
 		$object3->save();
 
-		$this->assertGreaterThan(0, $object3->getMemcacheTimestamp()); 
-		$this->assertNotEquals($object2->getMemcacheTimestamp(), $object3->getMemcacheTimestamp());
+		$this->assertGreaterThan(0, $object3->getSerializeTimestamp()); 
+		$this->assertNotEquals($object2->getSerializeTimestamp(), $object3->getSerializeTimestamp());
 		$this->assertNotEquals($object2->primary_key, $object3->primary_key);
 		$this->assertNotEquals($object2->state, $object3->state);
 		$this->assertNotEquals($object2->updated, $object3->updated);
@@ -140,7 +134,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals($object1->state, $object2->state);
 		$this->assertNotEquals($object1->updated, $object2->updated);
 		$this->assertNotEquals($object1->unique, $object2->unique);
-		$this->assertGreaterThan($object1->getMemcacheTimestamp(), $object2->getMemcacheTimestamp());
+		$this->assertGreaterThan($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
 	}
 
 	public function testUnique()
