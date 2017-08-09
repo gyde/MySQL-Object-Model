@@ -27,15 +27,19 @@ class MOMSimple extends MOMBase
 	/**
 	  * Get by primary key
 	  * @param mixed $id
+	  * @param bool $allowNull allow NULL to be return when empty id is provided
 	  * @throws BaseException
 	  * @throws MySQLException
 	  * @return object
 	  */
-	public static function getById($id)
+	public static function getById($id, $allowNull = false)
 	{
 		$class = get_called_class();
 		self::checkDbAndTableConstants($class);
 		self::hasPrimaryKey();
+
+		if (empty($id) && $allowNull)
+			return NULL;
 
 		if (empty($id))
 			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty primary key value');

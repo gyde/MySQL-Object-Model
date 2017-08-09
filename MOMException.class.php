@@ -45,7 +45,7 @@ class MOMException extends \Exception
 	  */
 	public static function setLanguage($language)
 	{
-		self::$language = $language;
+		self::$language = mb_strtoupper($language);
 	}
 	
 	/**
