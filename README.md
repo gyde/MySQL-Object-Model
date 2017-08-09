@@ -77,7 +77,7 @@ A compound scaffoling class for MySQL tables with SEVERAL columns as primary key
 
 ## Tests (PHPUnit)
 Tests has been designed using PHPUnit and will create and dropped tables as needed. 
-Inorder to run the tests, the following needs to be satisfied:
+In order to run the tests, the following needs to be satisfied:
 
 * A running mysql server
 * A database named mom and mom2 (test tables will be CREATED and DROPPED here)
