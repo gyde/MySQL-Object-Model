@@ -83,9 +83,10 @@ foreach ($users as $user)
 ```
 
 #### Filtering
+A small guide to filtering using where clauses on many or one object
 ##### Many
-```php
 Fetch some User objects by SQL where clause
+```php
 $where = '`'.User::COLUMN_NAME.'` = '.User::escapeStatic('foo');
 $someObjects = User::getAllByWhere($where);
 foreach ($someObjects as $object)
@@ -93,9 +94,27 @@ foreach ($someObjects as $object)
 	echo $object->name;
 }
 ```
-##### One
+Functionality like the above example should in general be placed inside the object class like so:
 ```php
+class User extends MOMSimple
+{
+	...
+	/**
+	  * Fetch users using name
+	  * @param string $name
+	  * @return array<int user_id, User>
+	  */
+	public static function getByName($name)
+	{
+		$where = '`'.self::COLUMN_NAME.'` = '.self::escapeStatic($name);
+		return self::getAllByWhere($where, null, true);
+	}
+	...
+}
+```
+##### One
 Fetch one User object by SQL where clause
+```php
 $where = '`'.User::COLUMN_NAME.'` = '.User::escapeStatic('foo');
 $order = '`'
 $someObjects = User::getOne($where);
