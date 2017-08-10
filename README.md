@@ -92,7 +92,7 @@ $someObjects = User::getAllByWhere($where);
 foreach ($someObjects as $object)
 {
 	echo $object->name;
-}
+
 ```
 Functionality like the above example should in general be placed inside the object class like so:
 ```php
@@ -181,6 +181,6 @@ export MYSQL_PASSWD="YOUR_PASSWORD"
 ### build_mom
 Shell script to "build" MOM using first providede argument as namespace.
 ```sh
-./build_mom \\\\my\\\\name\\\\space
+./build_mom my\\\\name\\\\space
 ```
-MOM files will be placed in a folder called build
+MOM files will be placed in a folder called build with namespace my\name\space. Additional slashes are needed due to shell escaping
