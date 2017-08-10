@@ -144,6 +144,7 @@ class User extends MOMSimple
 	}
 	...
 }
+```
 
 ## Classes / Types
 
