@@ -47,16 +47,10 @@ class MOMSimple extends MOMBase
 			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty primary key value');
 
 		$selector = self::getSelector($id);
-		// early return from static cache
-		if (($entry = self::getStaticEntry($selector)) !== FALSE)
-			return $entry;
 
-		// early return from memcache
-		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
-		{
-			self::setStaticEntry($selector, $entry);
+		// early return from cache
+		if (($entry = self::getCacheEntry($selector)) !== FALSE)
 			return $entry;
-		}
 
 		$new = NULL;
 		if (($row = self::getRowByIdStatic($id)) !== NULL)
@@ -65,14 +59,7 @@ class MOMSimple extends MOMBase
 			$new->fillByStatic($row);
 		}
 
-		/**
-		  * Cache fetched object
-		  * Objects that are NULL will be store in static cache but not memcache
-		  * To reselect the same non exsistant element during a session is unnessesary but to put it in memcache would be unwise.
-		  */
-		self::setStaticEntry($selector, $new);
-		if ($new !== NULL)
-			self::setMemcacheEntry($selector, $new);
+		self::setCacheEntry($selector, $new);
 
 		return $new;
 	}
@@ -168,8 +155,7 @@ class MOMSimple extends MOMBase
 		static::tryToDelete($sql);
 
 		$selector = self::getSelector($id);
-		$this->deleteMemcacheEntry($selector);
-		self::deleteStaticEntry($selector);
+		$this->deleteCacheEntry($selector);
 	}
 
 	/**

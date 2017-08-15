@@ -692,6 +692,50 @@ abstract class MOMBase implements \Serializable
 	}
 
 	/**
+	  * Get cached entry from either static or memcache
+	  * @param string $selector
+	  * @return mixed object|false
+	  */
+	protected static function getCacheEntry($selector)
+	{
+		// early return from static cache
+		if (($entry = self::getStaticEntry($selector)) !== FALSE)
+			return $entry;
+
+		// early return from memcache
+		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
+		{
+			self::setStaticEntry($selector, $entry);
+			return $entry;
+		}
+
+		return FALSE;
+	}
+
+	/**
+	  * Set cache entry for static and memcache
+	  * @param string $selector
+	  * @param object $object
+	  */
+	protected static function setCacheEntry($selector, $object)
+	{
+		/**
+		  * Cache fetched object
+		  * Objects that are NULL will be store in static cache but not memcache
+		  * To reselect the same non exsistant element during a session is unnessesary but to put it in memcache would be unwise.
+		  */
+		self::setStaticEntry($selector, $object);
+		if ($object !== NULL)
+			self::setMemcacheEntry($selector, $object);
+	}
+
+	protected function deleteCacheEntry($selector)
+	{
+		$this->deleteMemcacheEntry($selector);
+		self::deleteStaticEntry($selector);
+	}
+
+	/**
 	  * Get entry from static cache
 	  * @param string $selector
 	  * @return object, object[] or FALSE if no data is found
