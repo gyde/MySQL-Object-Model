@@ -412,29 +412,34 @@ abstract class MOMBase implements \Serializable
 	  */
 	private function describe($class)
 	{
-		if (!array_key_exists($class, self::$__mbDescriptions))
+		if (array_key_exists($class, self::$__mbDescriptions))
 		{
-			$selector = self::getMemcacheKey('DESCRIPTION');
-			if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
-			{
-				self::$__mbDescriptions[$class] = $entry;
-			}
-			else
-			{
-				$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
-				$res = $this->queryObject($sql);
-				$description = array();
-				while (($row = $res->fetch()) !== FALSE)
-				{
-					// If Field start is equal to self::RESERVED_PREFIX
-					if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
-						throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+			if (static::VERBOSE_STATIC_CACHE)
+				error_log('Getting static description for class: '.$class);
 
-					$description[$row['Field']] = $row;
-				}
-				self::$__mbDescriptions[$class] = $description;
-				self::setMemcacheEntry($selector, $description);
+			return;
+		}
+
+		$selector = 'mb_DESCRIPTION';
+		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
+		{
+			self::$__mbDescriptions[$class] = $entry;
+		}
+		else
+		{
+			$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
+			$res = $this->queryObject($sql);
+			$description = array();
+			while (($row = $res->fetch()) !== FALSE)
+			{
+				// If Field start is equal to self::RESERVED_PREFIX
+				if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
+					throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+
+				$description[$row['Field']] = $row;
 			}
+			self::$__mbDescriptions[$class] = $description;
+			self::setMemcacheEntry($selector, $description);
 		}
 	}
 
