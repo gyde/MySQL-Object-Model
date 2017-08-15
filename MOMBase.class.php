@@ -18,6 +18,10 @@ abstract class MOMBase implements \Serializable
 
 	const CLASS_REVISION = 0;
 
+	const VERBOSE_SQL = FALSE;
+	const VERBOSE_STATIC_CACHE = FALSE;
+	const VERBOSE_MEMCACHE = FALSE;
+
 	/**
 	  * Every object has its own PDO connection
 	  * If none is providede on object instansiation one is picked
@@ -527,6 +531,8 @@ abstract class MOMBase implements \Serializable
 	  */
 	private static function query($connection, $sql)
 	{
+		if (self::VERBOSE_SQL)
+			error_log($sql);
 		$result = $connection->query($sql, \PDO::FETCH_ASSOC);
 		if ($result === FALSE)
 			throw new MySQLException($sql, $connection->errorCode, $connection->errorInfo[2]);
@@ -746,7 +752,11 @@ abstract class MOMBase implements \Serializable
 		{
 			$class = get_called_class();
 			if (isset(self::$__mbStaticCache[$class][$selector]))
+			{
+				if (self::VERBOSE_STATIC_CACHE)
+					error_log('Getting static entry with class: '.$class.' and selector: '.$selector);
 				return self::$__mbStaticCache[$class][$selector];
+			}
 		}
 
 		return FALSE;
@@ -772,6 +782,8 @@ abstract class MOMBase implements \Serializable
 						$value->__mbStaticCacheTimestamp = time();
 				}
 			}
+			if (self::VERBOSE_STATIC_CACHE)
+				error_log('Setting static entry with class: '.$class.' and selector: '.$selector);
 			self::$__mbStaticCache[$class][$selector] = $value;
 		}
 	}
@@ -785,6 +797,8 @@ abstract class MOMBase implements \Serializable
 		if (static::useStaticCache())
 		{
 			$class = get_called_class();
+			if (self::VERBOSE_STATIC_CACHE)
+				error_log('Deleting static entry with class: '.$class.' and selector: '.$selector);
 			unset(self::$__mbStaticCache[$class][$selector]);
 		}
 	}
@@ -801,12 +815,20 @@ abstract class MOMBase implements \Serializable
 			if ($context == self::CONTEXT_STATIC)
 			{
 				if (($memcache = self::getMemcache()) !== FALSE)
+				{
+					if (self::VERBOSE_MEMCACHE)
+						error_log('Setting memcache entry with selector: '.$selector);
 					$memcache['memcache']->set(self::getMemcacheKey($selector), $value, $memcache['expiration']);
+				}
 			}
 			else if ($context == self::CONTEXT_OBJECT)
 			{
 				if ($value->__mbMemcache !== FALSE)
+				{
+					if (self::VERBOSE_MEMCACHE)
+						error_log('Setting memcache entry with selector: '.$selector);
 					$value->__mbMemcache['memcache']->set(self::getMemcacheKey($selector), $value, $value->__mbMemcache['expiration']);
+				}
 			}
 		}
 	}
@@ -829,6 +851,8 @@ abstract class MOMBase implements \Serializable
 		if ($data === FALSE)
 			return FALSE;
 
+		if (self::VERBOSE_MEMCACHE)
+			error_log('Got memcache entry with selector: '.$selector);
 		return $data;
 	}
 
@@ -841,7 +865,11 @@ abstract class MOMBase implements \Serializable
 		if (static::useMemcache())
 		{
 			if ($this->__mbMemcache !== FALSE)
+			{
+				if (self::VERBOSE_MEMCACHE)
+					error_log('Deleting memcache entry with selector: '.$selector);
 				$this->__mbMemcache['memcache']->delete(self::getMemcacheKey($selector));
+			}
 		}
 	}
 
