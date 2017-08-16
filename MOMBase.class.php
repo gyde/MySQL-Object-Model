@@ -968,6 +968,7 @@ abstract class MOMBase implements \Serializable
 		}
 		$this->__mbSerializeTimestamp = time();
 		$data['__mbSerializeTimestamp'] = $this->__mbSerializeTimestamp;
+		$data['__mbNewObject'] = $this->__mbNewObject;
 
 		return serialize($data);
 	}
@@ -987,6 +988,7 @@ abstract class MOMBase implements \Serializable
 			$this->$field['Field'] = $data[$field['Field']];
 		}
 		$this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
+		$this->__mbNewObject = $data['__mbNewObject'];
 		$this->__mbConnection = self::getConnection();
 		$this->__mbMemcache = self::getMemcache();
 	}
