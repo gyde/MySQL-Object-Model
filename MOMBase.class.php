@@ -784,7 +784,7 @@ abstract class MOMBase implements \Serializable
 				foreach ($value as $element)
 				{
 					if ($element instanceOf MOMBase)
-						$value->__mbStaticCacheTimestamp = time();
+						$element->__mbStaticCacheTimestamp = time();
 				}
 			}
 			if (static::VERBOSE_STATIC_CACHE)
