@@ -230,7 +230,7 @@ abstract class MOMBase implements \Serializable
 		$sql .= ' LIMIT 1';
 
 		$res = self::queryStatic($sql);
-		if (($row = $res->fetch()) !== NULL)
+		if (($row = $res->fetch()) !== false)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
