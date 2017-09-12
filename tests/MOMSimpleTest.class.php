@@ -13,7 +13,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	public static function setUpBeforeClass()
 	{
-		try 
+		try
 		{
 			self::$connection = Util::getConnection();
 			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
@@ -54,7 +54,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		foreach ($sqls as $sql)
 			self::$connection->query($sql);
-		self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
+		self::$memcache = Util::getMemcache();
 		self::$memcache->flush();
 	}
 
@@ -74,10 +74,10 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals($object1->getSerializeTimestamp(), 0);
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
-		$this->assertGreaterThan(0, $object1->getSerializeTimestamp()); 
+		$this->assertGreaterThan(0, $object1->getSerializeTimestamp());
 
 		$object2 = MOMSimpleActual::getById($object1->primary_key);
-		$this->assertGreaterThan(0, $object2->getSerializeTimestamp()); 
+		$this->assertGreaterThan(0, $object2->getSerializeTimestamp());
 		$this->assertEquals($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
 		$this->assertEquals($object1->primary_key, $object2->primary_key);
 		$this->assertEquals($object1->state, $object2->state);
@@ -91,7 +91,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$object3->unique = uniqid();
 		$object3->save();
 
-		$this->assertGreaterThan(0, $object3->getSerializeTimestamp()); 
+		$this->assertGreaterThan(0, $object3->getSerializeTimestamp());
 		$this->assertNotEquals($object2->getSerializeTimestamp(), $object3->getSerializeTimestamp());
 		$this->assertNotEquals($object2->primary_key, $object3->primary_key);
 		$this->assertNotEquals($object2->state, $object3->state);
@@ -162,17 +162,53 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$objects = MOMSimpleActual2::getAll();
 		$this->assertCount(0, $objects);
-		
+
 		$object1 = new MOMSimpleActual2();
 		$object1->unique = uniqid();
 		$object1->save();
-		
+
 		$objects = MOMSimpleActual2::getAll();
 		$this->assertCount(1, $objects);
-		
+
 		MOMSimpleActual::setDbName(NULL);
 	}
-	
+
+	/**
+	  * Test memcache on user created memcache methods
+	  * Uses memcache and static flush functions directly
+	  */
+	public function testMemcache()
+	{
+		// Locate some items we can cache
+		$uniqueKeys = [];
+		foreach ($objects = MOMSimpleActual::getAll() as $object)
+		{
+			$uniqueKeys[] = $object->{MOMSimpleActual::COLUMN_UNIQUE};
+		}
+
+		/**
+		  * Make sure the memcache is empty and fetch all the objects using a
+		  * user created memcaching method
+		  * This tests PDO connection when objects are unserialized
+		  */
+		self::$memcache->flush();
+		$object = null;
+		foreach ($uniqueKeys as $uniqueKey)
+		{
+			$object = MOMSimpleActual::getByUniqueMemcached($uniqueKey);
+		}
+		// Unset the description cache in MOM
+		$object->unDescribe();
+		// Flush all the objects from the memcache
+		$object::flushStaticEntries();
+
+		// Refetch the objects from the memcache
+		foreach ($uniqueKeys as $uniqueKey)
+		{
+			MOMSimpleActual::getByUniqueMemcached($uniqueKey);
+		}
+	}
+
 	public function testDelete()
 	{
 		$objects = MOMSimpleActual::getAll();

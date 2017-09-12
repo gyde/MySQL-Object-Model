@@ -17,6 +17,7 @@ abstract class MOMBase implements \Serializable
 	const USE_MEMCACHE = FALSE;
 
 	const CLASS_REVISION = 0;
+	const CLASS_DESCRIPTION_SELECTOR = '__mbDescription';
 
 	const VERBOSE_SQL = FALSE;
 	const VERBOSE_STATIC_CACHE = FALSE;
@@ -129,20 +130,20 @@ abstract class MOMBase implements \Serializable
 
 		if ($memcache instanceOf \Memcache)
 		{
-			if (!self::useMemcache())
+			if (!static::useMemcache())
 				throw new BaseException(BaseException::MEMCACHE_NOT_ENABLED_BUT_SET);
 			$options = array('memcache' => $memcache, 'expiration' => (int)$memcacheExpiration);
 			$this->__mbMemcache = $options;
 		}
 		else
 		{
-			if (self::useMemcache())
+			if (static::useMemcache())
 				$this->__mbMemcache = self::getMemcache();
 		}
 
-		$this->describe($class);
+		$description = $this->describe();
 
-		foreach (self::$__mbDescriptions[$class] as $field)
+		foreach ($description as $field)
 		{
 			if (!in_array($field['Default'], self::$__mbProtectedValueDefaults))
 				$this->$field['Field'] = $field['Default'];
@@ -404,43 +405,64 @@ abstract class MOMBase implements \Serializable
 	}
 
 	/**
-	  * Describes the class using DESCRIBE
+	  * Describes the called class using DESCRIBE
 	  * Caches model in static cache and in Memcache(if enabled)
 	  * Used when creating new objects, for default values and field info
 	  * Entry in memcache will be keyed using classname and CLASS_REVISION
-	  * @param string $class classname of the extending class
+	  * @return array<string, string>
 	  */
-	private function describe($class)
+	private function describe()
 	{
-		if (array_key_exists($class, self::$__mbDescriptions))
+		$class = get_called_class();
+		if (array_key_exists($class, self::$__mbDescriptions) && is_array(self::$__mbDescriptions[$class]))
 		{
 			if (static::VERBOSE_STATIC_CACHE)
 				error_log('Getting static description for class: '.$class);
 
-			return;
+			return self::$__mbDescriptions[$class];
 		}
 
-		$selector = 'mb_DESCRIPTION';
-		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
+		if (($entry = self::getMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR)) !== FALSE)
 		{
 			self::$__mbDescriptions[$class] = $entry;
+			return $entry;
 		}
-		else
-		{
-			$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
-			$res = $this->queryObject($sql);
-			$description = array();
-			while (($row = $res->fetch()) !== FALSE)
-			{
-				// If Field start is equal to self::RESERVED_PREFIX
-				if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
-					throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
 
-				$description[$row['Field']] = $row;
-			}
-			self::$__mbDescriptions[$class] = $description;
-			self::setMemcacheEntry($selector, $description);
+		$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
+		$res = $this->queryObject($sql);
+		$description = array();
+		while (($row = $res->fetch()) !== FALSE)
+		{
+			// If Field start is equal to self::RESERVED_PREFIX
+			if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
+				throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+
+			$description[$row['Field']] = $row;
 		}
+
+		self::setMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR, $description);
+
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Setting static description for class: '.$class);
+		self::$__mbDescriptions[$class] = $description;
+
+		return $description;
+	}
+
+	/**
+	  * Uncache the description of the class in static and memcache
+	  * This method is used for unit tests and expert level usage
+	  * @tags advanced
+	  */
+	public function unDescribe()
+	{
+		$class = get_called_class();
+
+		self::deleteMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR);
+
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Deleting static description for class: '.$class);
+		static::$__mbDescriptions[$class] = null;
 	}
 
 	/**
@@ -809,6 +831,18 @@ abstract class MOMBase implements \Serializable
 	}
 
 	/**
+	  * Allow static cache to be flushed for an entire class
+	  */
+	public static function flushStaticEntries()
+	{
+		$class = get_called_class();
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Deleting all static entries with class: '.$class);
+
+		self::$__mbStaticCache[$class] = null;
+	}
+
+	/**
 	  * Set an entry in memcache
 	  * @param string $selector
 	  * @param mixed $value
@@ -980,16 +1014,15 @@ abstract class MOMBase implements \Serializable
 	  */
 	public function unserialize($data)
 	{
-		$class = get_called_class();
-		$this->describe($class);
+		$this->__mbConnection = self::getConnection();
+		$description = $this->describe();
 		$data = unserialize($data);
-		foreach (self::$__mbDescriptions[$class] as $field)
+		foreach ($description as $field)
 		{
 			$this->$field['Field'] = $data[$field['Field']];
 		}
 		$this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
 		$this->__mbNewObject = $data['__mbNewObject'];
-		$this->__mbConnection = self::getConnection();
 		$this->__mbMemcache = self::getMemcache();
 	}
 }
