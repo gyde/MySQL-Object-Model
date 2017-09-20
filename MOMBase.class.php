@@ -677,7 +677,7 @@ abstract class MOMBase implements \Serializable
 	  */
 	private static function getMemcache()
 	{
-		$memcache = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		$memcache = self::getNestedByClass(self::$__mbMemcaches, get_called_class());
 		if ($memcache !== FALSE)
 			return $memcache;
 
