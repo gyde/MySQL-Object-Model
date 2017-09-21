@@ -99,6 +99,27 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertNotEquals($object2->unique, $object3->unique);
 	}
 
+	public function testLimit()
+	{
+		$objects = MOMSimpleActual::getAll(null, false, 1);
+		$this->assertEquals(1, count($objects));
+	}
+
+	public function testDuplicateKey()
+	{
+		$objects = MOMSimpleActual::getAll(null, false, 1);
+		$object1 = reset($objects);
+
+		try {
+			$object2 = new MOMSimpleActual();
+			$object2->state = 'SET';
+			$object2->unique = $object1->unique;
+			$object2->save();
+		} catch (\tests\mom\MOMBaseException $e) {
+			$this->assertEquals($e->getCode(), \tests\mom\MOMBaseException::OBJECT_DUPLICATED_ENTRY);
+		}
+	}
+
 	public function testGetAll()
 	{
 		$objects = MOMSimpleActual::getAll();

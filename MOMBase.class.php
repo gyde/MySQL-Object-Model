@@ -560,9 +560,12 @@ abstract class MOMBase implements \Serializable
 	{
 		if (static::VERBOSE_SQL)
 			error_log($sql);
-		$result = $connection->query($sql, \PDO::FETCH_ASSOC);
-		if ($result === FALSE)
-			throw new MySQLException($sql, $connection->errorCode, $connection->errorInfo[2]);
+
+		try {
+			$result = $connection->query($sql, \PDO::FETCH_ASSOC);
+		} catch (\PDOException $e) {
+			throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+		}
 
 		return $result;
 	}
