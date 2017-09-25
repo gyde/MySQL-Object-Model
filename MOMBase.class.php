@@ -765,9 +765,14 @@ abstract class MOMBase implements \Serializable
 			self::setMemcacheEntry($selector, $object);
 	}
 
-	protected function deleteCacheEntry($selector)
+	/**
+	  * Delete entries from memcache and static cache
+	  * @param string $selector
+	  * @param bool $customSelector overwrites prepended string which is normally added to memcache selector
+	  */
+	protected function deleteCacheEntry($selector, $customSelector = false)
 	{
-		$this->deleteMemcacheEntry($selector);
+		$this->deleteMemcacheEntry($selector, $customSelector);
 		self::deleteStaticEntry($selector);
 	}
 
@@ -901,8 +906,9 @@ abstract class MOMBase implements \Serializable
 	/**
 	  * Delete an entry in memcache
 	  * @param string $selector
+	  * @param bool $customSelector
 	  */
-	protected function deleteMemcacheEntry($selector)
+	protected function deleteMemcacheEntry($selector, $customSelector = false)
 	{
 		if (static::useMemcache())
 		{
@@ -910,7 +916,7 @@ abstract class MOMBase implements \Serializable
 			{
 				if (static::VERBOSE_MEMCACHE)
 					error_log('Deleting memcache entry with selector: '.$selector);
-				$this->__mbMemcache['memcache']->delete(self::getMemcacheKey($selector));
+				$this->__mbMemcache['memcache']->delete(self::getMemcacheKey($selector, $customSelector));
 			}
 		}
 	}
@@ -919,10 +925,14 @@ abstract class MOMBase implements \Serializable
 	  * Get the memcache key for the specified selector
 	  * Prepends called class name
 	  * @param string $selector
+	  * @param bool $customSelector
 	  * @return string
 	  */
-	protected static function getMemcacheKey($selector)
+	protected static function getMemcacheKey($selector, $customSelector = false)
 	{
+		if ($customSeletor)
+			return $selector;
+
 		return get_called_class().'_'.static::CLASS_REVISION.'_'.$selector;
 	}
 
