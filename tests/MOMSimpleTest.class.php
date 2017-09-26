@@ -241,5 +241,11 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertCount(0, $objects);
 	}
+
+	public function testAllowNull()
+	{
+		$object = MOMSimpleActual::getById('sdfasdfasdf', true);
+		$this->assertEquals($object, null);
+	}
 }
 ?>

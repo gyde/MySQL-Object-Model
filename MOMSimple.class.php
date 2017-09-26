@@ -53,7 +53,7 @@ class MOMSimple extends MOMBase
 			return $entry;
 
 		$new = NULL;
-		if (($row = self::getRowByIdStatic($id)) !== NULL)
+		if (($row = self::getRowByIdStatic($id)) !== FALSE)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
