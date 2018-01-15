@@ -563,7 +563,7 @@ abstract class MOMBase implements \Serializable
 	  */
 	protected static function queryStatic($sql)
 	{
-		return self::query(self::getConnection(), $sql);
+		return static::query(self::getConnection(), $sql);
 	}
 
 	/**
@@ -574,7 +574,7 @@ abstract class MOMBase implements \Serializable
 	  */
 	protected function queryObject($sql)
 	{
-		return self::query($this->__mbConnection, $sql);
+		return static::query($this->__mbConnection, $sql);
 	}
 
 	/**
@@ -583,7 +583,7 @@ abstract class MOMBase implements \Serializable
 	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLException
 	  */
-	private static function query($connection, $sql)
+	protected static function query($connection, $sql)
 	{
 		if (static::VERBOSE_SQL)
 			error_log($sql);
