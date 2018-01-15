@@ -334,6 +334,33 @@ abstract class MOMBase implements \Serializable
 	}
 
 	/**
+	  * Get object count
+	  * @throws \util\DatabaseException
+	  * @return int
+	  */
+	public static function getCount()
+	{
+		return self::getCountByWhere();
+	}
+
+	/**
+	  * Get object count by a sql where clause
+	  * @param string $where
+	  * @throws \util\DatabaseException
+	  * @return int
+	  */
+	public static function getCountByWhere($where = NULL)
+	{
+		$sql = 'SELECT COUNT(*) FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
+
+		if (!empty($where))
+			$sql .= ' WHERE '.$where;
+
+		$result = self::queryStatic($sql);
+		return $result->fetchColumn(0);
+	}
+
+	/**
 	  * Updates an obejct from object methods
 	  * @param string[] $row \PDO_result->fetch_assoc
 	  */
