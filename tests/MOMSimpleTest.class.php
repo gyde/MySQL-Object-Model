@@ -72,9 +72,11 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$object1 = new MOMSimpleActual();
 		$object1->unique = uniqid();
 		$this->assertEquals($object1->getSerializeTimestamp(), 0);
+		$this->assertEquals($object1->isNew(), true);
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
 		$this->assertGreaterThan(0, $object1->getSerializeTimestamp());
+		$this->assertEquals($object1->isNew(), false);
 
 		$object2 = MOMSimpleActual::getById($object1->primary_key);
 		$this->assertGreaterThan(0, $object2->getSerializeTimestamp());

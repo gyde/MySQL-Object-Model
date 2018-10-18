@@ -107,10 +107,12 @@ class MOMSimple extends MOMBase
 	}
 
 	/**
-	 * Save the object
-	 * @throws BaseException
-	 */
-	public function save()
+	  * Save the object
+	  * @param mixed $metaData data needed by save method
+	  * @throws MOMBaseException
+	  * @see MOMBase
+	  */
+	public function save($metaData = null)
 	{
 		$sql = static::buildSaveSql();
 

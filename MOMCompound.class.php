@@ -48,9 +48,11 @@ class MOMCompound extends MOMBase
 
 	/**
 	  * Save the object
-	  * @throws BaseException
+	  * @param mixed $metaData data needed by save method
+	  * @throws MOMBaseException
+	  * @see MOMBase
 	  */
-	public function save()
+	public function save($metaData = null)
 	{
 		$sql = static::buildSaveSql();
 

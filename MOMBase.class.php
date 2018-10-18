@@ -157,9 +157,10 @@ abstract class MOMBase implements \Serializable
 	  * The object itself is updated with row data reselected
 	  * from the database, iorder to update default values from table definition
 	  * If save fails a MOMBaseException should be thrown
+	  * @param mixed $metaData data needed by save method
 	  * @throws MOMBaseException
 	  */
-	abstract public function save();
+	abstract public function save($metaData = null);
 
 	/**
 	  * Abstract method, build the sql statement used by save method
@@ -732,6 +733,16 @@ abstract class MOMBase implements \Serializable
 			static::$__mbMemcaches[self::GLOBAL_MEMCACHE] = $options;
 		else
 			static::$__mbMemcaches[$class] = $options;
+	}
+
+	/** Check if an object is new
+	  *
+	  * New objects has never been saved to the database
+	  * @return bool
+	  */
+	public function isNew()
+	{
+		return $this->__mbNewObject;
 	}
 
 	/**
