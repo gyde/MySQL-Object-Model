@@ -126,9 +126,9 @@ class MOMCompound extends MOMBase
 		foreach (static::$__mbDescriptions[get_called_class()] as $field)
 		{
 			if (!in_array($field['Field'], $compoundKeys) &&
-				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
+				!in_array($field['Default'], self::$__mbProtectedValueDefaults) &&
+				!in_array($field['Extra'], self::$__mbProtectedValueExtras))
 				$values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
-
 		}
 
 		return $values;

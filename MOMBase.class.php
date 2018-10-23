@@ -88,6 +88,15 @@ abstract class MOMBase implements \Serializable
 	protected static $__mbProtectedValueDefaults = array('CURRENT_TIMESTAMP', 'NOW()');
 
 	/**
+	  * Values used by mysql as extra values for columns
+	  * When these are picked up from the model description
+	  * nothing is inserted into the save or update query
+	  * for these fields
+	  * @var string[]
+	  */
+	protected static $__mbProtectedValueExtras = array('on update CURRENT_TIMESTAMP');
+
+	/**
 	  * Names of all basic classes in MySQL-Object-Model
 	  * Used as stop words when searching static arrays for
 	  * nested extending class data

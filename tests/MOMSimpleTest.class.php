@@ -17,7 +17,8 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		{
 			self::$connection = Util::getConnection();
 			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
-			self::createTable(MOMSimpleActual::DB, MOMSimpleActual::TABLE); self::createTable(MOMSimpleActual2::DB.'2', MOMSimpleActual2::TABLE); }
+			self::createTable(MOMSimpleActual::DB, MOMSimpleActual::TABLE);
+			self::createTable(MOMSimpleActual2::DB.'2', MOMSimpleActual2::TABLE); }
 		catch (\PDOException $e)
 		{
 			self::$skipTests = TRUE;
@@ -34,7 +35,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
-			', `'.MOMSimpleActual::COLUMN_UPDATED.'` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
+			', `'.MOMSimpleActual::COLUMN_CREATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 			', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 			') ENGINE = MYISAM;';
 
@@ -83,7 +84,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
 		$this->assertEquals($object1->primary_key, $object2->primary_key);
 		$this->assertEquals($object1->state, $object2->state);
-		$this->assertEquals($object1->updated, $object2->updated);
+		$this->assertEquals($object1->created, $object2->created);
 		$this->assertEquals($object1->unique, $object2->unique);
 
 		sleep(1);
@@ -97,7 +98,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$this->assertNotEquals($object2->getSerializeTimestamp(), $object3->getSerializeTimestamp());
 		$this->assertNotEquals($object2->primary_key, $object3->primary_key);
 		$this->assertNotEquals($object2->state, $object3->state);
-		$this->assertNotEquals($object2->updated, $object3->updated);
+		$this->assertNotEquals($object2->created, $object3->created);
 		$this->assertNotEquals($object2->unique, $object3->unique);
 	}
 
@@ -155,7 +156,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertNotEquals($object1->primary_key, $object2->primary_key);
 		$this->assertEquals($object1->state, $object2->state);
-		$this->assertNotEquals($object1->updated, $object2->updated);
+		$this->assertNotEquals($object1->created, $object2->created);
 		$this->assertNotEquals($object1->unique, $object2->unique);
 		$this->assertGreaterThan($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
 	}
@@ -170,7 +171,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 		$this->assertEquals($object1->primary_key, $object2->primary_key);
 		$this->assertEquals($object1->state, $object2->state);
-		$this->assertEquals($object1->updated, $object2->updated);
+		$this->assertEquals($object1->created, $object2->created);
 		$this->assertEquals($object1->unique, $object2->unique);
 	}
 
