@@ -227,11 +227,11 @@ class MOMCompound extends MOMBase
 	  */
 	protected function getRowIdentifier()
 	{
-		$identifier = '';
+		$identifier = [];
 		foreach (self::getCompoundKeys() as $key)
-			$identifier .= $this->{$key};
+			$identifier[] = $this->{$key};
 
-		return $identifier;
+		return json_encode($identifier);
 	}
 
 	/**
