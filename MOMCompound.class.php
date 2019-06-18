@@ -69,10 +69,11 @@ class MOMCompound extends MOMBase
 		if (($row = self::getRowByIds($ids)) === NULL)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
 
-		$isNew = $this->__mbNewObject;
+		// fillByObject() will change the return value of isNew()
+		$wasCreated = $this->isNew();
 		$this->fillByObject($row);
 
-		if ($isNew)
+		if ($wasCreated)
 			static::setStaticEntry($this->__mbSelector, $this);
 
 		self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
@@ -105,7 +106,7 @@ class MOMCompound extends MOMBase
 		$values = $this->getValuePairs();
 		$keys = $this->getKeyPairs();
 
-		if ($this->__mbNewObject)
+		if ($this->isNew())
 		{
 			$values = array_merge($keys, $values);
 
