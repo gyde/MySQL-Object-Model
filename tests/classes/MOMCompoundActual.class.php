@@ -6,6 +6,8 @@ class MOMCompoundActual extends \tests\mom\MOMCompound
 	const DB = 'mom';
 	const TABLE = 'mom_compound_test';
 
+	const USE_STATIC_CACHE = TRUE;
+
 	const COLUMN_COMPOUND_KEYS = 'key1,key2,key3';
 	const COLUMN_KEY1 = 'key1';
 	const COLUMN_KEY2 = 'key2';
