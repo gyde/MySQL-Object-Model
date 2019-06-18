@@ -174,9 +174,12 @@ export MYSQL_HOST="YOUR_HOST"
 export MYSQL_USERNAME="YOUR_USERNAME"
 export MYSQL_PASSWD="YOUR_PASSWORD"
 
+./build_mom tests\\\\mom tests/mom
+
 ./phpunit-4.8.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
 ```
-
+### Short cut
+ ./run_tests
 ## Tools
 ### build_mom
 Shell script to "build" MOM using first providede argument as namespace.
