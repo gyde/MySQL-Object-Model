@@ -4,6 +4,13 @@ A PHP Object Model using MySQL as backend via PDO. Allows fast scaffoling of Mod
 First version is available, then more information regarding installation, use and namespacing will follow.
 Memcache and Static cache has been added for MOMBase and MOMSimple
 
+# Table of Contents
+1. [Version](##Version - beta)
+2. [Usage](##Usage)
+3. [Classes / Types](##Classes / Types)
+4. [Caveats](##Cateats)
+5. [Tools](#Tools)
+
 ## Version - beta
 This project is currently begin used in small and medium projects by myself, Solaris (scout group), IT-Infrastructure @ Roskilde-festival and is considered quite stable.
 No guareentes are given when using this code, but all suggestions and bugreports are welcome.
@@ -156,6 +163,12 @@ A simple scaffoling class for MySQL tables with ONE column as primary key
 
 ### MOMCompound
 A compound scaffoling class for MySQL tables with SEVERAL columns as primary key
+
+## Caveats
+Here is a list of common tips, tricks and caveats currently in the MOM system.
+
+### On update / default value columns
+If you create a table with a column that has a default "current timestamp" value or "on update" property beware that this column is controlled completely by MOM and can't be updated by setting a value on public class variable. The column is omitted from any insert or update statements that MOM performs.
 
 ## Tests (PHPUnit)
 Tests has been designed using PHPUnit and will create and dropped tables as needed.
