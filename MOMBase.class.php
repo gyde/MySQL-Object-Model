@@ -91,7 +91,7 @@ abstract class MOMBase implements \Serializable
 	  * for these fields
 	  * @var string[]
 	  */
-	protected static $__mbProtectedValueDefaults = array('CURRENT_TIMESTAMP', 'NOW()');
+	protected static $__mbProtectedValueDefaults = array('current_timestamp()', 'CURRENT_TIMESTAMP', 'NOW()');
 
 	/**
 	  * Values used by mysql as extra values for columns
@@ -100,7 +100,7 @@ abstract class MOMBase implements \Serializable
 	  * for these fields
 	  * @var string[]
 	  */
-	protected static $__mbProtectedValueExtras = array('on update CURRENT_TIMESTAMP');
+	protected static $__mbProtectedValueExtras = array('on update current_timestamp()', 'on update CURRENT_TIMESTAMP');
 
 	/**
 	  * Names of all basic classes in MySQL-Object-Model
@@ -161,9 +161,9 @@ abstract class MOMBase implements \Serializable
 		foreach ($description as $field)
 		{
 			if (!in_array($field['Default'], self::$__mbProtectedValueDefaults))
-				$this->$field['Field'] = $field['Default'];
+				$this->{$field['Field']} = $field['Default'];
 			else
-				$this->$field['Field'] = NULL;
+				$this->{$field['Field']} = NULL;
 		}
 	}
 
@@ -669,7 +669,7 @@ abstract class MOMBase implements \Serializable
 		$str = 'Instance of '.$class.':'."\n";
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$str .= $field['Field'].': '.var_export($this->$field['Field'], TRUE)."\n";
+			$str .= $field['Field'].': '.var_export($this->{$field['Field']}, TRUE)."\n";
 		}
 
 		return $str;
@@ -1072,7 +1072,7 @@ abstract class MOMBase implements \Serializable
 		$data = [];
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$data[$field['Field']] = $this->$field['Field'];
+			$data[$field['Field']] = $this->{$field['Field']};
 		}
 		$this->__mbSerializeTimestamp = time();
 		$data['__mbSerializeTimestamp'] = $this->__mbSerializeTimestamp;
@@ -1093,7 +1093,7 @@ abstract class MOMBase implements \Serializable
 		$data = unserialize($data);
 		foreach ($description as $field)
 		{
-			$this->$field['Field'] = $data[$field['Field']];
+			$this->{$field['Field']} = $data[$field['Field']];
 		}
 		$this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
 		$this->__mbNewObject = $data['__mbNewObject'];
