@@ -174,26 +174,11 @@ If you create a table with a column that has a default "current timestamp" value
 Tests has been designed using PHPUnit and will create and dropped tables as needed.
 In order to run the tests, the following needs to be satisfied:
 
-* A running mysql server
-* A database named mom and mom2 (test tables will be CREATED and DROPPED here)
-* A User with full privileges and grant to both databases (New users will be CREATED and REVOKED)
-* An installation of PHPUnit
-* Setting environment variables for database, user and password
+* A running docker-ce environment
 
-
-```sh
-export MEMCACHE_HOST="YOUR_HOST"
-export MYSQL_HOST="YOUR_HOST"
-export MYSQL_USERNAME="YOUR_USERNAME"
-export MYSQL_PASSWD="YOUR_PASSWORD"
-
-./build_mom tests\\\\mom tests/mom
-
-./phpunit-4.8.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
-```
-### Short cut
+Run ./run_tests within the mom-unit-test container
  ./run_tests
-## Tools
+
 ### build_mom
 Shell script to "build" MOM using first providede argument as namespace.
 ```sh

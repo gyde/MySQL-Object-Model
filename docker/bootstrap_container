@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ $# -ne 1 ]; then
+  echo "Please specify mom path"
+  exit
+fi
+
+docker stop mom-unit-test
+docker rm mom-unit-test
+
+docker run --hostname=mom-unit-test --name mom-unit-test -v "$1:/srv/mom" -i -d -t mom-unit-test

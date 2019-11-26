@@ -1,0 +1,2 @@
+#!/bin/sh
+docker exec -it mom-unit-test /bin/bash

@@ -3,14 +3,14 @@ namespace tests;
 
 use tests\classes\MOMCompoundActual;
 
-class MOMCompoundTest extends \PHPUnit_Framework_TestCase
+class MOMCompoundTest extends \PHPUnit\Framework\TestCase
 {
 	static $connection = NULL;
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
 		try
 		{
@@ -42,7 +42,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		\tests\mom\MOMBase::setMemcache(self::$memcache, 300);
 	}
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
 		self::$connection = Util::getConnection();
 		$sql =
@@ -53,7 +53,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		self::$memcache->flush();
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		if (self::$skipTests)
 		{
@@ -102,7 +102,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 
 		$object = MOMCompoundActual::getByIds($ids);
 
-		$this->assertNull($object, NULL);
+		$this->assertNull($object, 'Object should not be in database');
 	}
 
 	public function testStaticCacheSingleton()

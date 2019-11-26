@@ -4,14 +4,14 @@ namespace tests;
 use tests\classes\MOMSimpleActual;
 use tests\classes\MOMSimpleActual2;
 
-class MOMSimpleTest extends \PHPUnit_Framework_TestCase
+class MOMSimpleTest extends \PHPUnit\Framework\TestCase
 {
 	static $connection = NULL;
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
 		try
 		{
@@ -31,13 +31,13 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 
 	private static function createTable($dbName, $tableName)
 	{
-		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.';';
+		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName;
 		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 			', `'.MOMSimpleActual::COLUMN_CREATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 			', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
-			') ENGINE = MYISAM;';
+			') ENGINE = MYISAM';
 
 		foreach ($sqls as $sql)
 		{
@@ -45,7 +45,7 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		}
 	}
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
 		self::$connection = Util::getConnection();
 		$sqls[] =
@@ -53,13 +53,14 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$sqls[] =
 			'DROP TABLE `'.MOMSimpleActual::DB.'2`.`'.MOMSimpleActual2::TABLE.'`';
 
-		foreach ($sqls as $sql)
+		foreach ($sqls as $sql) {
 			self::$connection->query($sql);
+        }
 		self::$memcache = Util::getMemcache();
 		self::$memcache->flush();
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		if (self::$skipTests)
 		{
@@ -67,7 +68,6 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 			$this->markTestSkipped(self::$skipTestsMessage);
 		}
 	}
-
 	public function testSave()
 	{
 		$object1 = new MOMSimpleActual();
@@ -219,18 +219,20 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$object = null;
 		foreach ($uniqueKeys as $uniqueKey)
 		{
-			$object = MOMSimpleActual::getByUniqueMemcached($uniqueKey);
+			$object1 = MOMSimpleActual::getByUniqueMemcached($uniqueKey);
 		}
 		// Unset the description cache in MOM
-		$object->unDescribe();
+		$object1->unDescribe();
 		// Flush all the objects from the memcache
-		$object::flushStaticEntries();
+		$object1::flushStaticEntries();
 
 		// Refetch the objects from the memcache
 		foreach ($uniqueKeys as $uniqueKey)
 		{
-			MOMSimpleActual::getByUniqueMemcached($uniqueKey);
+			$object2 = MOMSimpleActual::getByUniqueMemcached($uniqueKey);
 		}
+
+        $this->assertEquals($object1, $object2);
 	}
 
 	public function testDelete()

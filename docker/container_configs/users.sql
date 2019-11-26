@@ -1,0 +1,4 @@
+CREATE DATABASE `mom`;
+CREATE DATABASE `mom2`;
+GRANT ALL PRIVILEGES ON `mom`.* TO 'mom'@'%' IDENTIFIED BY 'FaxChopShine';
+GRANT ALL PRIVILEGES ON `mom2`.* TO 'mom'@'%' IDENTIFIED BY 'FaxChopShine';
