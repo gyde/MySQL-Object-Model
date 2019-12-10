@@ -58,6 +58,12 @@ abstract class MOMBase implements \Serializable
 	protected $__mbSerializeTimestamp= 0;
 
 	/**
+	  * Stores the static cache and memcache selector
+	  * @var string
+	  */
+	protected $__mbSelector = '';
+
+	/**
 	  * Defines database names, this will override usage of constant DB
 	  * This is mapped by class name and supports nested extending
 	  * Use method setDbName()
@@ -192,6 +198,17 @@ abstract class MOMBase implements \Serializable
 	abstract protected function getRowIdentifier();
 
 	/**
+	  * Get static cache and memcache selector
+	  * @param array $row
+	  * @throws MOMBaseException
+	  * @return string
+	  */
+	protected static function getSelector($row)
+	{
+		throw new BaseException(BaseException::GET_SELECTOR_NOT_DEFINED, get_called_class().' doesn\'t have a getSelector() method');
+	}
+
+	/**
 	  * Set database name
 	  * @param string $name
 	  */
@@ -228,26 +245,12 @@ abstract class MOMBase implements \Serializable
 	  */
 	public static function getOne ($where = NULL, $order = NULL)
 	{
-		$new = NULL;
+		$res = self::getAllByWhereGeneric($where, $order, FALSE, 1, 0);
 
-		$sql = 'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
+		if (count($res) == 0)
+			return NULL;
 
-		if ($where)
-			$sql .= ' WHERE '.$where;
-
-		if ($order)
-			$sql .= ' ORDER BY '.$order;
-
-		$sql .= ' LIMIT 1';
-
-		$res = self::queryStatic($sql);
-		if (($row = $res->fetch()) !== false)
-		{
-			$new = new static();
-			$new->fillByStatic($row);
-		}
-
-		return $new;
+		return $res[0];
 	}
 
 	/**
@@ -307,12 +310,19 @@ abstract class MOMBase implements \Serializable
 		$res = self::queryStatic($sql);
 		while (($row = $res->fetch()) !== false)
 		{
-			$new = new static();
-			$new->fillByStatic($row);
+			$selector = static::getSelector($row);
+			$entry = self::getCacheEntry($selector);
+
+			if ($entry === FALSE) {
+				$entry = new static();
+				$entry->fillByStatic($row);
+				self::setCacheEntry($selector, $entry);
+			}
+
 			if ($keyed)
-				$many[$new->getRowIdentifier()] = $new;
+				$many[$entry->getRowIdentifier()] = $entry;
 			else
-				$many[] = $new;
+				$many[] = $entry;
 		}
 
 		return $many;
@@ -404,6 +414,7 @@ abstract class MOMBase implements \Serializable
 			$this->$key = $value;
 		}
 		$this->__mbNewObject = FALSE;
+		$this->__mbSelector = static::getSelector($row);
 	}
 
 	/**

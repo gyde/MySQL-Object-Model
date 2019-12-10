@@ -12,7 +12,7 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 
 	public static function setUpBeforeClass()
 	{
-		try 
+		try
 		{
 			self::$connection = Util::getConnection();
 			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
@@ -101,7 +101,43 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		$object->delete();
 
 		$object = MOMCompoundActual::getByIds($ids);
-		
+
 		$this->assertNull($object, NULL);
+	}
+
+	public function testStaticCacheSingleton()
+	{
+		$ids = array(
+			MOMCompoundActual::COLUMN_KEY1 => 4,
+			MOMCompoundActual::COLUMN_KEY2 => 5,
+			MOMCompoundActual::COLUMN_KEY3 => 6
+		);
+		$where = array();
+
+		$object1 = new MOMCompoundActual(self::$connection);
+		$object1->unique = uniqid();
+		foreach ($ids as $key => $id)
+		{
+			$object1->{$key} = $id;
+			$where[] = '`'.$key.'` = \''.$id.'\'';
+		}
+		$where = join(' AND ', $where);
+		$object1->save();
+
+		$object2 = MOMCompoundActual::getByIds($ids);
+		$this->assertSame($object1, $object2);
+
+		MOMCompoundActual::flushStaticEntries();
+
+		$object3 = MOMCompoundActual::getByIds($ids);
+		$this->assertNotSame($object2, $object3);
+
+		$object4 = MOMCompoundActual::getByIds($ids);
+		$this->assertSame($object3, $object4);
+
+		// All other get* methods (getOne included) goes through getAllByWhereGeneric()
+		// Meaning that if this test passes singletons should be ensured.
+		$object5 = MOMCompoundActual::getOne($where);
+		$this->assertSame($object4, $object5);
 	}
 }

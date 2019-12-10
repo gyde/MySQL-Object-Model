@@ -250,5 +250,30 @@ class MOMSimpleTest extends \PHPUnit_Framework_TestCase
 		$object = MOMSimpleActual::getById('sdfasdfasdf', true);
 		$this->assertEquals($object, null);
 	}
+
+	public function testStaticCacheSingleton()
+	{
+		$object1 = new MOMSimpleActual();
+		$object1->{MOMSimpleActual::COLUMN_UNIQUE} = uniqid();
+		$object1->save();
+
+		$id = $object1->{MOMSimpleActual::COLUMN_PRIMARY_KEY};
+
+		$object2 = MOMSimpleActual::getById($id);
+		$this->assertSame($object1, $object2);
+
+		MOMSimpleActual::flushStaticEntries();
+
+		$object3 = MOMSimpleActual::getById($id);
+		$this->assertNotSame($object2, $object3);
+
+		$object4 = MOMSimpleActual::getById($id);
+		$this->assertSame($object3, $object4);
+
+		// All other get* methods (getOne included) goes through getAllByWhereGeneric()
+		// Meaning that if this test passes singletons should be ensured.
+		$object5 = MOMSimpleActual::getOne('`'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` = \''.$id.'\'');
+		$this->assertSame($object4, $object5);
+	}
 }
 ?>

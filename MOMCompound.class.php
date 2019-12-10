@@ -26,14 +26,16 @@ class MOMCompound extends MOMBase
 	  * @throws MySQLException
 	  * @return object
 	  */
-	public static function getByIds($ids)
+	public static function getByIds(array $ids)
 	{
 		$class = get_called_class();
 		self::checkDbAndTableConstants($class);
 		self::hasCompoundKeys();
 
-		if (empty($ids) || !is_array($ids))
-			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty compound key value');
+		// early return from cache
+		$selector = static::getSelector($ids);
+		if (($entry = self::getCacheEntry($selector)) !== FALSE)
+			return $entry;
 
 		$new = NULL;
 
@@ -42,6 +44,8 @@ class MOMCompound extends MOMBase
 			$new = new static();
 			$new->fillByStatic($row);
 		}
+
+		self::setCacheEntry($selector, $new);
 
 		return $new;
 	}
@@ -65,7 +69,14 @@ class MOMCompound extends MOMBase
 		if (($row = self::getRowByIds($ids)) === NULL)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with data from database');
 
+		// fillByObject() will change the return value of isNew()
+		$wasCreated = $this->isNew();
 		$this->fillByObject($row);
+
+		if ($wasCreated)
+			static::setStaticEntry($this->__mbSelector, $this);
+
+		self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
 	}
 
 	/**
@@ -82,6 +93,8 @@ class MOMCompound extends MOMBase
 			' WHERE '.join(' AND ', $keys);
 
 		static::tryToDelete($sql);
+
+		$this->deleteCacheEntry($this->__mbSelector);
 	}
 
 	/**
@@ -93,7 +106,7 @@ class MOMCompound extends MOMBase
 		$values = $this->getValuePairs();
 		$keys = $this->getKeyPairs();
 
-		if ($this->__mbNewObject)
+		if ($this->isNew())
 		{
 			$values = array_merge($keys, $values);
 
@@ -235,6 +248,24 @@ class MOMCompound extends MOMBase
 	}
 
 	/**
+	  * Get static cache and memcache selector
+	  * @param array $row
+	  * @return string
+	  */
+	protected static function getSelector($row)
+	{
+		self::validateIds($row);
+
+		$selector = [];
+		foreach (self::getCompoundKeys() as $key)
+		{
+			$selector[] = $key.'_'.$row[$key];
+		}
+
+		return join('_', $selector);
+	}
+
+	/**
 	  * Checks if the extending class has defined a primary key
 	  * @throws BaseException
 	  */
@@ -242,6 +273,18 @@ class MOMCompound extends MOMBase
 	{
 		if (!defined('static::COLUMN_COMPOUND_KEYS'))
 			throw new BaseException(BaseException::COMPOUND_KEYS_NOT_DEFINED, get_called_class().' has no COLUMN_COMPOUND_KEYS const');
+	}
+
+	/**
+	  * Validates that all compound keys are present in ids
+	  * @param array<string, mixed> $ids
+	  * @throws BaseException
+	  */
+	private static function validateIds($ids)
+	{
+		$difs = array_diff(self::getCompoundKeys(), array_keys($ids));
+		if (count($difs) != 0)
+			throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class().'->'.__FUNCTION__.' failed to fetch object from database, '.$difs[0].' is not present amoung ids');
 	}
 }
 ?>

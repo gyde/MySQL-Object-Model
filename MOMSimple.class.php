@@ -46,7 +46,7 @@ class MOMSimple extends MOMBase
 		if (empty($id))
 			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty primary key value');
 
-		$selector = self::getSelector($id);
+		$selector = static::getSelector([static::COLUMN_PRIMARY_KEY => $id]);
 
 		// early return from cache
 		if (($entry = self::getCacheEntry($selector)) !== FALSE)
@@ -119,7 +119,7 @@ class MOMSimple extends MOMBase
 		$this->tryToSave($sql);
 
 		$keyname = static::COLUMN_PRIMARY_KEY;
-		if ($this->__mbNewObject && $this->__mbConnection->lastInsertId() != 0)
+		if ($this->isNew() && $this->__mbConnection->lastInsertId() != 0)
 		{
 			$id = $this->__mbConnection->lastInsertId();
 		}
@@ -129,13 +129,15 @@ class MOMSimple extends MOMBase
 		if (($row = self::getRowById($id)) === false)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with metadata from database');
 
+		// fillByObject() will change the return value of isNew()
+		$wasCreated = $this->isNew();
 		$this->fillByObject($row);
 
-		$selector = self::getSelector($id);
-		if ($this->__mbNewObject)
-			static::setStaticEntry($selector, $this);
+		if ($wasCreated){
+			static::setStaticEntry($this->__mbSelector, $this);
+		}
 
-		self::setMemcacheEntry($selector, $this, self::CONTEXT_OBJECT);
+		self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
 	}
 
 	/**
@@ -156,8 +158,7 @@ class MOMSimple extends MOMBase
 
 		static::tryToDelete($sql);
 
-		$selector = self::getSelector($id);
-		$this->deleteCacheEntry($selector);
+		$this->deleteCacheEntry($this->__mbSelector);
 	}
 
 	/**
@@ -182,7 +183,7 @@ class MOMSimple extends MOMBase
 				$autoIncrement = TRUE;
 		}
 
-		if ($this->__mbNewObject)
+		if ($this->isNew())
 		{
 			if (!$autoIncrement)
 			$values[] = ' `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($this->$primaryKey);
@@ -213,12 +214,12 @@ class MOMSimple extends MOMBase
 
 	/**
 	  * Get static cache and memcache selector
-	  * @param string $id
+	  * @param array $row
 	  * @return string
 	  */
-	private static function getSelector($id)
+	protected static function getSelector($row)
 	{
-		return static::COLUMN_PRIMARY_KEY.'_'.$id;
+		return static::COLUMN_PRIMARY_KEY.'_'.$row[static::COLUMN_PRIMARY_KEY];
 	}
 
 	/**
