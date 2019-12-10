@@ -1,0 +1,9 @@
+#!/bin/sh
+export MEMCACHE_HOST="127.0.0.1"
+export MYSQL_HOST="localhost"
+export MYSQL_USERNAME="mom"
+export MYSQL_PASSWD="FaxChopShine"
+
+cd /srv/mom/
+
+./phpunit-8.4.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v
