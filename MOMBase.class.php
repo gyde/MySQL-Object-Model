@@ -628,11 +628,11 @@ abstract class MOMBase implements \Serializable
 		if ($this->$field === NULL) {
 			return '`'.$field.'` = NULL';
 		}
-			
+
 		if (strpos($type, 'int') !== false) {
 			return '`'.$field.'` = '.(int)$this->$field;
 		}
-		
+
 		return '`'.$field.'` = '.$this->escapeObject($this->$field);
 	}
 
