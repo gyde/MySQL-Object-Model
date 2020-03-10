@@ -36,6 +36,7 @@ class MOMSimpleTest extends \PHPUnit\Framework\TestCase
 			' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 			', `'.MOMSimpleActual::COLUMN_CREATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
+			', `'.MOMSimpleActual::COLUMN_IS_IT_ON.'` BOOLEAN DEFAULT 0'.
 			', `'.MOMSimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 			') ENGINE = MYISAM';
 
@@ -277,5 +278,19 @@ class MOMSimpleTest extends \PHPUnit\Framework\TestCase
 		$object5 = MOMSimpleActual::getOne('`'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` = \''.$id.'\'');
 		$this->assertSame($object4, $object5);
 	}
+
+	public function testBoolean()
+	{
+		$object1 = new MOMSimpleActual();
+		$object1->{MOMSimpleActual::COLUMN_UNIQUE} = uniqid();
+		$object1->{MOMSimpleActual::COLUMN_IS_IT_ON} = false;
+		$object1->save();
+		$this->assertEquals($object1->{MOMSimpleActual::COLUMN_IS_IT_ON}, 0);
+
+		$object2 = new MOMSimpleActual();
+		$object2->{MOMSimpleActual::COLUMN_UNIQUE} = uniqid();
+		$object2->{MOMSimpleActual::COLUMN_IS_IT_ON} = true;
+		$object2->save();
+		$this->assertEquals($object2->{MOMSimpleActual::COLUMN_IS_IT_ON}, 1);
+	}
 }
-?>
