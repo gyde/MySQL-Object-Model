@@ -1,0 +1,3 @@
+#!/bin/sh
+docker system prune -a
+docker image build --no-cache -f DockerFile.base -t mom-unit-test .

@@ -91,7 +91,7 @@ abstract class MOMBase implements \Serializable
 	  * for these fields
 	  * @var string[]
 	  */
-	protected static $__mbProtectedValueDefaults = array('CURRENT_TIMESTAMP', 'NOW()');
+	protected static $__mbProtectedValueDefaults = array('current_timestamp()', 'CURRENT_TIMESTAMP', 'NOW()');
 
 	/**
 	  * Values used by mysql as extra values for columns
@@ -100,7 +100,7 @@ abstract class MOMBase implements \Serializable
 	  * for these fields
 	  * @var string[]
 	  */
-	protected static $__mbProtectedValueExtras = array('on update CURRENT_TIMESTAMP');
+	protected static $__mbProtectedValueExtras = array('on update current_timestamp()', 'on update CURRENT_TIMESTAMP');
 
 	/**
 	  * Names of all basic classes in MySQL-Object-Model
@@ -161,9 +161,9 @@ abstract class MOMBase implements \Serializable
 		foreach ($description as $field)
 		{
 			if (!in_array($field['Default'], self::$__mbProtectedValueDefaults))
-				$this->$field['Field'] = $field['Default'];
+				$this->{$field['Field']} = $field['Default'];
 			else
-				$this->$field['Field'] = NULL;
+				$this->{$field['Field']} = NULL;
 		}
 	}
 
@@ -606,8 +606,9 @@ abstract class MOMBase implements \Serializable
 	  */
 	protected static function query($connection, $sql)
 	{
-		if (static::VERBOSE_SQL)
+		if (static::VERBOSE_SQL) {
 			error_log($sql);
+		}
 
 		try {
 			$result = $connection->query($sql, \PDO::FETCH_ASSOC);
@@ -663,27 +664,23 @@ abstract class MOMBase implements \Serializable
 	/**
 	  * Escape object value
 	  * Everything is escaped as strings except for NULL
-	  * @param string $field
-	  * @param string $type
-	  * @return string
 	  */
-	protected function escapeObjectPair($field, $type = 'varchar')
+	protected function escapeObjectPair(string $field, string $type = 'varchar') : string
 	{
-		if ($this->$field !== NULL)
-		{
-			if (strpos('int', $type) !== FALSE)
-				return '`'.$field.'` = '.(int)$this->$field;
-
-			return '`'.$field.'` = '.$this->escapeObject($this->$field);
-		}
-		else
+		if ($this->$field === NULL) {
 			return '`'.$field.'` = NULL';
+		}
+
+		if (strpos($type, 'int') !== false) {
+			return '`'.$field.'` = '.(int)$this->$field;
+		}
+
+		return '`'.$field.'` = '.$this->escapeObject($this->$field);
 	}
 
 	/**
 	  * Escape a value using static PDO connection
 	  * @param string $value
-	  * @param bool $quote wrap value in single quote
 	  * @return string
 	  */
 	protected static function escapeStatic($value)
@@ -711,7 +708,7 @@ abstract class MOMBase implements \Serializable
 		$str = 'Instance of '.$class.':'."\n";
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$str .= $field['Field'].': '.var_export($this->$field['Field'], TRUE)."\n";
+			$str .= $field['Field'].': '.var_export($this->{$field['Field']}, TRUE)."\n";
 		}
 
 		return $str;
@@ -719,11 +716,10 @@ abstract class MOMBase implements \Serializable
 
 	/**
 	  * Escape a value according to PDO connection
-	  * @param PDO $connection mysql connection
-	  * @param string $value
-	  * @return string
+	  * @param mixed $value
+	  * @return mixed
 	  */
-	private static function escape($connection, $value)
+	private static function escape(\PDO $connection, $value)
 	{
 		if (!$connection instanceof \PDO)
 			throw new BaseException(BaseException::MISSING_CONNECTION);
@@ -1114,11 +1110,12 @@ abstract class MOMBase implements \Serializable
 		$data = [];
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$data[$field['Field']] = $this->$field['Field'];
+			$data[$field['Field']] = $this->{$field['Field']};
 		}
 		$this->__mbSerializeTimestamp = time();
 		$data['__mbSerializeTimestamp'] = $this->__mbSerializeTimestamp;
 		$data['__mbNewObject'] = $this->__mbNewObject;
+		$data['__mbSelector'] = $this->__mbSelector;
 
 		return serialize($data);
 	}
@@ -1135,10 +1132,11 @@ abstract class MOMBase implements \Serializable
 		$data = unserialize($data);
 		foreach ($description as $field)
 		{
-			$this->$field['Field'] = $data[$field['Field']];
+			$this->{$field['Field']} = $data[$field['Field']];
 		}
 		$this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
 		$this->__mbNewObject = $data['__mbNewObject'];
+		$this->__mbSelector = $data['__mbSelector'];
 		$this->__mbMemcache = self::getMemcache();
 	}
 }

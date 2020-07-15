@@ -10,6 +10,7 @@ namespace tests\classes; class MOMSimpleActual extends \tests\mom\MOMSimple
 	const COLUMN_PRIMARY_KEY = 'primary_key';
 	const COLUMN_DEFAULT_VALUE = 'state';
 	const COLUMN_CREATED = 'created';
+	const COLUMN_IS_IT_ON = 'is_it_on';
 	const COLUMN_UNIQUE = 'unique';
 
 	const STATE_READY = 'READY';

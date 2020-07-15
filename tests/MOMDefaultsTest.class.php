@@ -3,14 +3,14 @@ namespace tests;
 
 use tests\classes\MOMDefaultActual;
 
-class MOMDefaultTest extends \PHPUnit_Framework_TestCase
+class MOMDefaultTest extends \PHPUnit\Framework\TestCase
 {
 	static $connection = NULL;
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
 		try {
 			self::$connection = Util::getConnection();
@@ -41,7 +41,7 @@ class MOMDefaultTest extends \PHPUnit_Framework_TestCase
 		}
 	}
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
 		self::$connection = Util::getConnection();
 		$sqls[] =
@@ -53,7 +53,7 @@ class MOMDefaultTest extends \PHPUnit_Framework_TestCase
 		self::$memcache->flush();
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		if (self::$skipTests)
 		{

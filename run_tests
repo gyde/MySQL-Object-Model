@@ -1,9 +1,4 @@
 #!/bin/sh
-export MEMCACHE_HOST="127.0.0.1"
-export MYSQL_HOST="127.0.0.1"
-export MYSQL_USERNAME="mom"
-export MYSQL_PASSWD="SXwVMe47FXw68M6S"
-
 ./build_mom tests\\\\mom tests/mom
 
-phpunit --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
+docker exec -it mom-unit-test /srv/mom/docker/run-mom-unit-test

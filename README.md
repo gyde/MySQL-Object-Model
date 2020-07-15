@@ -5,14 +5,20 @@ First version is available, then more information regarding installation, use an
 Memcache and Static cache has been added for MOMBase and MOMSimple
 
 # Table of Contents
-1. [Version](##Version - beta)
+1. [Version](##Version)
 2. [Usage](##Usage)
-3. [Classes / Types](##Classes / Types)
+3. [Classes](##Classes)
 4. [Caveats](##Cateats)
 5. [Tools](#Tools)
 
-## Version - beta
-This project is currently begin used in small and medium projects by myself, Solaris (scout group), IT-Infrastructure @ Roskilde-festival and is considered quite stable.
+## Version
+This version is considered stable and will be version tagged 1.0 once its been field tested with php7.3!
+
+Current projects using this project:
+ * Solaris - mobilspejd.dk - Scout race navigation system)
+ * DOG - roskilde-festival IT deployment tool
+ * Intranet - Ordbogen A/S intranet
+
 No guareentes are given when using this code, but all suggestions and bugreports are welcome.
 
 ## Usage
@@ -171,31 +177,20 @@ Here is a list of common tips, tricks and caveats currently in the MOM system.
 If you create a table with a column that has a default "current timestamp" value or "on update" property beware that this column is controlled completely by MOM and can't be updated by setting a value on public class variable. The column is omitted from any insert or update statements that MOM performs.
 
 ## Tests (PHPUnit)
-Tests has been designed using PHPUnit and will create and dropped tables as needed.
+Tests has been designed using PHPUnit and will create and droppe tables as needed within the docker env.
 In order to run the tests, the following needs to be satisfied:
 
-* A running mysql server
-* A database named mom and mom2 (test tables will be CREATED and DROPPED here)
-* A User with full privileges and grant to both databases (New users will be CREATED and REVOKED)
-* An installation of PHPUnit
-* Setting environment variables for database, user and password
+* A running docker-ce environment
 
+Build the docker environment using
+ ./docker/build_container
+ ./docker/bootstrap_container /path/to/MOM/
 
-```sh
-export MEMCACHE_HOST="YOUR_HOST"
-export MYSQL_HOST="YOUR_HOST"
-export MYSQL_USERNAME="YOUR_USERNAME"
-export MYSQL_PASSWD="YOUR_PASSWORD"
-
-./build_mom tests\\\\mom tests/mom
-
-./phpunit-4.8.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v --debug
-```
-### Short cut
+Run ./run_tests to start the tests within the docker env.
  ./run_tests
-## Tools
+
 ### build_mom
-Shell script to "build" MOM using first providede argument as namespace.
+Shell script to "build" MOM using first provided argument as namespace.
 ```sh
 ./build_mom my\\\\name\\\\space
 ```

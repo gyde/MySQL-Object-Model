@@ -1,0 +1,2 @@
+#!/bin/sh
+docker stop mom-unit-test

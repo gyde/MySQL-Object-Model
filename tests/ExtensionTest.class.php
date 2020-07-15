@@ -5,14 +5,14 @@ use tests\classes\FooBar;
 use tests\classes\Foo;
 use tests\classes\Bar;
 
-class ExtensionTest extends \PHPUnit_Framework_TestCase
+class ExtensionTest extends \PHPUnit\Framework\TestCase
 {
 	static $connection = NULL;
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
 		FooBar::setDbName('mom');
 		try 
@@ -48,7 +48,7 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
 		}
 	}
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
 		self::$connection = Util::getConnection();
 		$sqls[] =
@@ -62,7 +62,7 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
 		self::$memcache->flush();
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		if (self::$skipTests)
 		{
