@@ -194,7 +194,7 @@ class MOMCompound extends MOMBase
 	  */
 	private function getKeyPairs()
 	{
-		$wheres = '';
+		$wheres = [];
 		$description = static::$__mbDescriptions[get_called_class()];
 		foreach (self::getCompoundKeys() as $key)
 		{

@@ -619,6 +619,48 @@ abstract class MOMBase implements \Serializable
 	}
 
 	/**
+	  * Prepare method for static methods
+	  * @param string $sql
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLException
+	  */
+	protected static function prepareStatic($sql)
+	{
+		return static::prepare(self::getConnection(), $sql);
+	}
+
+	/**
+	  * Prepare method for objects, always uses the objects specific PDO connection
+	  * @param string $sql
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLuException
+	  */
+	protected function prepareObject($sql)
+	{
+		return static::prepare($this->__mbConnection, $sql);
+	}
+
+	/**
+	  * Generic query method
+	  * @param PDO $connection PDO connection
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLException
+	  */
+	protected static function prepare($connection, $sql)
+	{
+		if (static::VERBOSE_SQL)
+			error_log($sql);
+
+		try {
+			$result = $connection->prepare($sql);
+		} catch (\PDOException $e) {
+			throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+		}
+
+		return $result;
+	}
+
+	/**
 	  * Escape object value
 	  * Everything is escaped as strings except for NULL
 	  * @param string $field
