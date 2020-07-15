@@ -3,20 +3,21 @@ namespace tests;
 
 use tests\classes\MOMCompoundActual;
 
-class MOMCompoundTest extends \PHPUnit_Framework_TestCase
+class MOMCompoundTest extends \PHPUnit\Framework\TestCase
 {
 	static $connection = NULL;
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
-		if (self::$connection !== FALSE && self::$connection->connect_errno == 0)
+		try
 		{
-			$sql =
-				'CREATE TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.' ('.
+			self::$connection = Util::getConnection();
+			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+			$sqls[] = 'DROP TABLE IF EXISTS '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.';';
+			$sqls[] = 'CREATE TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE.' ('.
 				' `'.MOMCompoundActual::COLUMN_KEY1.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.MOMCompoundActual::COLUMN_KEY2.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.MOMCompoundActual::COLUMN_KEY3.'` INT(10) UNSIGNED NOT NULL'.
@@ -26,39 +27,33 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 				', PRIMARY KEY (`'.MOMCompoundActual::COLUMN_KEY1.'`,`'.MOMCompoundActual::COLUMN_KEY2.'`,`'.MOMCompoundActual::COLUMN_KEY3.'`)'.
 				') ENGINE = MYISAM;';
 
-			$res = self::$connection->query($sql);
-			if ($res !== FALSE)
+			foreach ($sqls as $sql)
 			{
-				\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+				$res = self::$connection->exec($sql);
 			}
-			else
-			{
-				self::$skipTestsMessage = self::$connection->error;
-				self::$skipTests = TRUE;
-			}
-
 		}
-		else
+		catch (\PDOException $e)
 		{
 			self::$skipTests = TRUE;
+			self::$skipTestsMessage = $e->getMessage();
 		}
 
 		self::$memcache = Util::getMemcache();
 		\tests\mom\MOMBase::setMemcache(self::$memcache, 300);
 	}
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
-		self::$connection = mysqli_connect($_ENV['MYSQLI_HOST'], $_ENV['MYSQLI_USERNAME'], $_ENV['MYSQLI_PASSWD']);
+		self::$connection = Util::getConnection();
 		$sql =
 			'DROP TABLE '.MOMCompoundActual::DB.'.'.MOMCompoundActual::TABLE;
 
 		self::$connection->query($sql);
-		self::$memcache = new \Memcached($_ENV['MEMCACHE_HOST']);
+		self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
 		self::$memcache->flush();
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		if (self::$skipTests)
 		{
@@ -106,7 +101,43 @@ class MOMCompoundTest extends \PHPUnit_Framework_TestCase
 		$object->delete();
 
 		$object = MOMCompoundActual::getByIds($ids);
-		
-		$this->assertNull($object, NULL);
+
+		$this->assertNull($object, 'Object should not be in database');
+	}
+
+	public function testStaticCacheSingleton()
+	{
+		$ids = array(
+			MOMCompoundActual::COLUMN_KEY1 => 4,
+			MOMCompoundActual::COLUMN_KEY2 => 5,
+			MOMCompoundActual::COLUMN_KEY3 => 6
+		);
+		$where = array();
+
+		$object1 = new MOMCompoundActual(self::$connection);
+		$object1->unique = uniqid();
+		foreach ($ids as $key => $id)
+		{
+			$object1->{$key} = $id;
+			$where[] = '`'.$key.'` = \''.$id.'\'';
+		}
+		$where = join(' AND ', $where);
+		$object1->save();
+
+		$object2 = MOMCompoundActual::getByIds($ids);
+		$this->assertSame($object1, $object2);
+
+		MOMCompoundActual::flushStaticEntries();
+
+		$object3 = MOMCompoundActual::getByIds($ids);
+		$this->assertNotSame($object2, $object3);
+
+		$object4 = MOMCompoundActual::getByIds($ids);
+		$this->assertSame($object3, $object4);
+
+		// All other get* methods (getOne included) goes through getAllByWhereGeneric()
+		// Meaning that if this test passes singletons should be ensured.
+		$object5 = MOMCompoundActual::getOne($where);
+		$this->assertSame($object4, $object5);
 	}
 }

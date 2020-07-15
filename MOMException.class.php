@@ -35,6 +35,9 @@ class MOMException extends \Exception
 	  */
 	public function getInternalMessage()
 	{
+		if ($this->internalMessage === NULL)
+			return 'No internal exception message was set';
+
 		return $this->internalMessage;
 	}
 

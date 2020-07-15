@@ -16,12 +16,14 @@ class MOMSimple extends MOMBase
 	/**
 	  * Constructs an object of the extending class using parent constructor
 	  * Checks if a primary key has been defined on the extending class
-	  * @param \mysqli $connection mysqli connection
+	  * @param \PDO $connection PDO connection
+	  * @param \memcached $memcache memcache connection
+	  * @param int $memcacheExpiration memcache expiration in seconds
 	  */
-	public function __construct(\mysqli $connection = NULL)
+	public function __construct(\PDO $connection = NULL, \Memcached $memcache = NULL, $memcacheExpiration = 0)
 	{
 		self::hasPrimaryKey();
-		parent::__construct($connection);
+		parent::__construct($connection, $memcache, $memcacheExpiration);
 	}
 
 	/**
@@ -44,34 +46,21 @@ class MOMSimple extends MOMBase
 		if (empty($id))
 			throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class().'::'.__FUNCTION__.' got empty primary key value');
 
-		$selector = self::getSelector($id);
-		// early return from static cache
-		if (($entry = self::getStaticEntry($selector)) !== FALSE)
-			return $entry;
+		$selector = static::getSelector([static::COLUMN_PRIMARY_KEY => $id]);
 
-		// early return from memcache
-		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
-		{
-			self::setStaticEntry($selector, $entry);
+		// early return from cache
+		if (($entry = self::getCacheEntry($selector)) !== FALSE)
 			return $entry;
-		}
 
 		$new = NULL;
-		if (($row = self::getRowByIdStatic($id)) !== NULL)
+		if (($row = self::getRowByIdStatic($id)) !== FALSE)
 		{
 			$new = new static();
 			$new->fillByStatic($row);
 		}
 
-		/**
-		  * Cache fetched object
-		  * Objects that are NULL will be store in static cache but not memcache
-		  * To reselect the same non exsistant element during a session is unnessesary but to put it in memcache would be unwise.
-		  */
-		self::setStaticEntry($selector, $new);
-		if ($new !== NULL)
-			self::setMemcacheEntry($selector, $new);
-	
+		self::setCacheEntry($selector, $new);
+
 		return $new;
 	}
 
@@ -79,7 +68,7 @@ class MOMSimple extends MOMBase
 	  * Get mysql row by primary key
 	  * @param mixed $id
 	  * @throws MySQLException
-	  * @return resource(mysql resource) or NULL on failure
+	  * @return resource(mysql resource) or false on failure
 	  */
 	private function getRowById($id)
 	{
@@ -87,22 +76,22 @@ class MOMSimple extends MOMBase
 		$sql = self::getRowByIdSelect($id);
 		$res = $this->queryObject($sql);
 
-		return $row = $res->fetch_assoc();
+		return $res->fetch();
 	}
 
 	/**
 	  * Get mysql row by primary key
 	  * @param mixed $id escaped
 	  * @throws MySQLException
-	  * @return resource(mysql resource) or NULL on failure
+	  * @return resource(mysql resource) or false on failure
 	  */
 	private static function getRowByIdStatic($id)
 	{
 		$id = self::escapeStatic($id);
 		$sql = self::getRowByIdSelect($id);
 		$res = self::queryStatic($sql);
-			
-		return $row = $res->fetch_assoc();
+
+		return $res->fetch();
 	}
 
 	/**
@@ -118,33 +107,37 @@ class MOMSimple extends MOMBase
 	}
 
 	/**
-	 * Save the object
-	 * @throws BaseException
-	 */
-	public function save()
+	  * Save the object
+	  * @param mixed $metaData data needed by save method
+	  * @throws MOMBaseException
+	  * @see MOMBase
+	  */
+	public function save($metaData = null)
 	{
 		$sql = static::buildSaveSql();
 
 		$this->tryToSave($sql);
-		
+
 		$keyname = static::COLUMN_PRIMARY_KEY;
-		if ($this->__mbNewObject && $this->__mbConnection->insert_id != 0)
+		if ($this->isNew() && $this->__mbConnection->lastInsertId() != 0)
 		{
-			$id = $this->__mbConnection->insert_id;
+			$id = $this->__mbConnection->lastInsertId();
 		}
 		else
 			$id = $this->$keyname;
 
-		if (($row = self::getRowById($id)) === NULL)
+		if (($row = self::getRowById($id)) === false)
 			throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class().'->'.__FUNCTION__.' failed to update object with metadata from database');
-		
+
+		// fillByObject() will change the return value of isNew()
+		$wasCreated = $this->isNew();
 		$this->fillByObject($row);
 
-		$selector = self::getSelector($id);
-		if ($this->__mbNewObject)
-			static::setStaticEntry($selector, $this);
+		if ($wasCreated){
+			static::setStaticEntry($this->__mbSelector, $this);
+		}
 
-		self::setMemcacheEntry($selector, $this, self::CONTEXT_OBJECT);
+		self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
 	}
 
 	/**
@@ -158,16 +151,14 @@ class MOMSimple extends MOMBase
 		$id = $this->$keyname;
 		if (empty($id))
 			throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class().'->'.__FUNCTION__.' failed to delete, primary key was empty');
-		
-		$sql = 
+
+		$sql =
 			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($id);
 
 		static::tryToDelete($sql);
 
-		$selector = self::getSelector($id);
-		$this->deleteMemcacheEntry($selector);
-		self::deleteStaticEntry($selector);
+		$this->deleteCacheEntry($this->__mbSelector);
 	}
 
 	/**
@@ -183,26 +174,27 @@ class MOMSimple extends MOMBase
 		foreach (static::$__mbDescriptions[$class] as $field)
 		{
 			//Ensures that the primay key and mysql protected value defaults are not in values array
-			if ($field['Field'] !== $primaryKey && 
-				!in_array($field['Default'], self::$__mbProtectedValueDefaults))
+			if ($field['Field'] !== $primaryKey &&
+				!in_array($field['Default'], self::$__mbProtectedValueDefaults) &&
+				!in_array($field['Extra'], self::$__mbProtectedValueExtras))
 				$values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
 
 			if ($field['Key'] == 'PRI' && $field['Extra'] == 'auto_increment')
 				$autoIncrement = TRUE;
 		}
 
-		if ($this->__mbNewObject)
+		if ($this->isNew())
 		{
 			if (!$autoIncrement)
 			$values[] = ' `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($this->$primaryKey);
 
-			$sql = 
+			$sql =
 				'INSERT INTO `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values);
 		}
 		else
 		{
-			$sql = 
+			$sql =
 				'UPDATE `'.self::getDbName().'`.`'.static::TABLE.'` SET'.
 				' '.join(', ', $values).
 				' WHERE `'.static::COLUMN_PRIMARY_KEY.'` = '.$this->escapeObject($this->$primaryKey);
@@ -222,12 +214,12 @@ class MOMSimple extends MOMBase
 
 	/**
 	  * Get static cache and memcache selector
-	  * @param string $id
+	  * @param array $row
 	  * @return string
 	  */
-	private static function getSelector($id)
+	protected static function getSelector($row)
 	{
-		return static::COLUMN_PRIMARY_KEY.'_'.$id;
+		return static::COLUMN_PRIMARY_KEY.'_'.$row[static::COLUMN_PRIMARY_KEY];
 	}
 
 	/**
@@ -241,7 +233,7 @@ class MOMSimple extends MOMBase
 	}
 
 	/**
-	  * When cloing a MySqlSimple object, the new object is no longer persistent 
+	  * When cloing a MySqlSimple object, the new object is no longer persistent
 	  * It will create a new entry when saved
 	  */
 	public function __clone()
@@ -249,7 +241,7 @@ class MOMSimple extends MOMBase
 		$primaryKey = static::COLUMN_PRIMARY_KEY;
 		$this->$primaryKey = NULL;
 		$this->__mbNewObject = TRUE;
-		$this->__mbMemcacheTimestamp = 0;
+		$this->__mbSerializeTimestamp = 0;
 		$this->__mbStaticCacheTimestamp = 0;
 	}
 }

@@ -6,18 +6,18 @@ class MOMBaseException extends MOMException
 	/**
 	  * EXCEPTION CONSTANTS BEGIN
 	  * A pair exist for each exception constant
-	  * An exception code and an exception message 
+	  * An exception code and an exception message
 	  * Use $internalMessage for technical stuff
-	  */ 
+	  */
 	const MISSING_DB_DEFINITION = 1;
 	const MESSAGE_1 = 'Missing database definition, please define const DB in extending class or use setDbName()';
-	
+
 	const MISSING_TABLE_DEFINITION = 2;
 	const MESSAGE_2 = 'Missing table definition, please define const TABLE in extending class';
 
 	const MISSING_CONNECTION = 3;
-	const MESSAGE_3 = 'Missing mysqli connection, please set one using ::setConnection(mysqli) or ::construct(mysqli)' ;
-	
+	const MESSAGE_3 = 'Missing PDO connection, please set one using ::setConnection(\PDO) or ::construct(\PDO)' ;
+
 	const PRIMARY_KEY_NOT_DEFINED = 4;
 	const MESSAGE_4 = 'Missing primary key definition, please define const COLUMN_PRIMARY_KEY in extending class';
 
@@ -39,8 +39,11 @@ class MOMBaseException extends MOMException
 	const CLASSNAME_RECURSION_LEVEL_TO_DEEP = 10;
 	const MESSAGE_10 = 'When resursivly searching for properties within models, resursion level became to high';
 
+	const GET_SELECTOR_NOT_DEFINED = 11;
+	const MESSAGE_11 = 'A static getSelector() method must be defined in classes extending MOMBase';
+
 	const OBJECT_NOT_SAVED = 100;
-	const MESSAGE_100 = 'Object could not be saved (created/updated)'; 
+	const MESSAGE_100 = 'Object could not be saved (created/updated)';
 
 	const OBJECT_NOT_DELETED = 101;
 	const MESSAGE_101 = 'Object could not be deleted';
@@ -56,7 +59,7 @@ class MOMBaseException extends MOMException
 
 	const OBJECTS_NOT_DELETED = 200;
 	const MESSAGE_200 = 'Several objects could not be deleted';
-	
+
 	const OBJECTS_NOT_FOUND = 201;
 	const MESSAGE_201 = 'Objects could not be fetched';
 

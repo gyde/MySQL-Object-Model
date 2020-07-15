@@ -1,0 +1,4 @@
+#!/bin/sh
+./build_mom tests\\\\mom tests/mom
+
+docker exec -it mom-unit-test /srv/mom/docker/run-mom-unit-test

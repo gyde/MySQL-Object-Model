@@ -4,7 +4,7 @@
 use /*USE_NAMESPACE*/MOMBaseException as BaseException;
 use /*USE_NAMESPACE*/MOMMySQLException as MySQLException;
 
-abstract class MOMBase
+abstract class MOMBase implements \Serializable
 {
 	const RESERVED_PREFIX = '__mb';
 	const GLOBAL_CONNECTION = '__mbGlobalConnection';
@@ -17,12 +17,17 @@ abstract class MOMBase
 	const USE_MEMCACHE = FALSE;
 
 	const CLASS_REVISION = 0;
+	const CLASS_DESCRIPTION_SELECTOR = '__mbDescription';
+
+	const VERBOSE_SQL = FALSE;
+	const VERBOSE_STATIC_CACHE = FALSE;
+	const VERBOSE_MEMCACHE = FALSE;
 
 	/**
-	  * Every object has its own mysqli connection
+	  * Every object has its own PDO connection
 	  * If none is providede on object instansiation one is picked
 	  * from $__mbConnections
-	  * @var \mysqli $__mbConnection
+	  * @var \PDO $__mbConnection
 	  */
 	protected $__mbConnection = NULL;
 
@@ -47,10 +52,16 @@ abstract class MOMBase
 	protected $__mbStaticCacheTimestamp = 0;
 
 	/**
-	  * Defines when object was put in memcache
-	  * @var int $__mbMemcacheTimestamp
+	  * Defines when object was serialized (most likely for memcaching)
+	  * @var int $__mbSerializeTimestamp
 	  */
-	protected $__mbMemcacheTimestamp = 0;
+	protected $__mbSerializeTimestamp= 0;
+
+	/**
+	  * Stores the static cache and memcache selector
+	  * @var string
+	  */
+	protected $__mbSelector = '';
 
 	/**
 	  * Defines database names, this will override usage of constant DB
@@ -75,12 +86,21 @@ abstract class MOMBase
 
 	/**
 	  * Values used by mysql as default values for columns
-	  * When these are picked up from the model description 
+	  * When these are picked up from the model description
 	  * nothing is inserted into the save or update query
 	  * for these fields
 	  * @var string[]
 	  */
-	protected static $__mbProtectedValueDefaults = array('CURRENT_TIMESTAMP', 'NOW()');
+	protected static $__mbProtectedValueDefaults = array('current_timestamp()', 'CURRENT_TIMESTAMP', 'NOW()');
+
+	/**
+	  * Values used by mysql as extra values for columns
+	  * When these are picked up from the model description
+	  * nothing is inserted into the save or update query
+	  * for these fields
+	  * @var string[]
+	  */
+	protected static $__mbProtectedValueExtras = array('on update current_timestamp()', 'on update CURRENT_TIMESTAMP');
 
 	/**
 	  * Names of all basic classes in MySQL-Object-Model
@@ -91,10 +111,10 @@ abstract class MOMBase
 	protected static $__mbProtectedClasses = array('/*USE_NAMESPACE*/MOMBase','/*USE_NAMESPACE*/MOMSimple','/*USE_NAMESPACE*/MOMCompound');
 
 	/**
-	  * Static cache with all mysqli connections
+	  * Static cache with all PDO connections
 	  * Can contain a global connection, or one per extending class
 	  * Depending on the use of setConnection
-	  * @var \mysqli[]
+	  * @var \PDO[]
 	  */
 	protected static $__mbConnections = array();
 
@@ -108,53 +128,54 @@ abstract class MOMBase
 
 	/**
 	  * Constructs an object of extending class using the database fields
-	  * Checks if the extending class has the correct consts and describes the extending class via mysqli
-	  * @param \mysqli $connection mysqli connection
+	  * Checks if the extending class has the correct consts and describes the extending class via PDO
+	  * @param \PDO $connection PDO connection
 	  * @param \memcached $memcache memcache connection
 	  * @param int $memcacheExpiration memcache expiration in seconds
 	  */
-	public function __construct(\mysqli $connection = NULL, \Memcached $memcache = NULL, $memcacheExpiration = 0)
+	public function __construct(\PDO $connection = NULL, \Memcached $memcache = NULL, $memcacheExpiration = 0)
 	{
 		$class = get_called_class();
 		$this->checkDbAndTableConstants($class);
 
-		if ($connection instanceOf \mysqli)
+		if ($connection instanceOf \PDO)
 			$this->__mbConnection = $connection;
 		else
 			$this->__mbConnection = self::getConnection();
 
 		if ($memcache instanceOf \Memcache)
 		{
-			if (!self::useMemcache())
+			if (!static::useMemcache())
 				throw new BaseException(BaseException::MEMCACHE_NOT_ENABLED_BUT_SET);
 			$options = array('memcache' => $memcache, 'expiration' => (int)$memcacheExpiration);
 			$this->__mbMemcache = $options;
 		}
 		else
 		{
-			if (self::useMemcache())
+			if (static::useMemcache())
 				$this->__mbMemcache = self::getMemcache();
 		}
 
-		$this->describe($class);
+		$description = $this->describe();
 
-		foreach (self::$__mbDescriptions[$class] as $field)
+		foreach ($description as $field)
 		{
 			if (!in_array($field['Default'], self::$__mbProtectedValueDefaults))
-				$this->$field['Field'] = $field['Default'];
+				$this->{$field['Field']} = $field['Default'];
 			else
-				$this->$field['Field'] = NULL;
+				$this->{$field['Field']} = NULL;
 		}
 	}
 
 	/**
 	  * Save the object in the database
-	  * The object itself is updated with row data reselected 
+	  * The object itself is updated with row data reselected
 	  * from the database, iorder to update default values from table definition
 	  * If save fails a MOMBaseException should be thrown
+	  * @param mixed $metaData data needed by save method
 	  * @throws MOMBaseException
 	  */
-	abstract public function save();
+	abstract public function save($metaData = null);
 
 	/**
 	  * Abstract method, build the sql statement used by save method
@@ -175,6 +196,17 @@ abstract class MOMBase
 	  * @return string
 	  */
 	abstract protected function getRowIdentifier();
+
+	/**
+	  * Get static cache and memcache selector
+	  * @param array $row
+	  * @throws MOMBaseException
+	  * @return string
+	  */
+	protected static function getSelector($row)
+	{
+		throw new BaseException(BaseException::GET_SELECTOR_NOT_DEFINED, get_called_class().' doesn\'t have a getSelector() method');
+	}
 
 	/**
 	  * Set database name
@@ -213,28 +245,14 @@ abstract class MOMBase
 	  */
 	public static function getOne ($where = NULL, $order = NULL)
 	{
-		$new = NULL;
+		$res = self::getAllByWhereGeneric($where, $order, FALSE, 1, 0);
 
-		$sql = 'SELECT * FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
+		if (count($res) == 0)
+			return NULL;
 
-		if ($where)
-			$sql .= ' WHERE '.$where;
-
-		if ($order)
-			$sql .= ' ORDER BY '.$order;
-
-		$sql .= ' LIMIT 1';
-
-		$res = self::queryStatic($sql);
-		if (($row = $res->fetch_assoc()) !== NULL)
-		{
-			$new = new static();
-			$new->fillByStatic($row);
-		}
-
-		return $new;
+		return $res[0];
 	}
-	
+
 	/**
 	  * Get all objects
 	  * @param string $order MySQL order clause
@@ -290,20 +308,27 @@ abstract class MOMBase
 			$sql .= ' LIMIT '.(int)$offset.','.(int)$limit;
 
 		$res = self::queryStatic($sql);
-		while (($row = $res->fetch_assoc()) !== NULL)
+		while (($row = $res->fetch()) !== false)
 		{
-			$new = new static();
-			$new->fillByStatic($row);
+			$selector = static::getSelector($row);
+			$entry = self::getCacheEntry($selector);
+
+			if ($entry === FALSE) {
+				$entry = new static();
+				$entry->fillByStatic($row);
+				self::setCacheEntry($selector, $entry);
+			}
+
 			if ($keyed)
-				$many[$new->getRowIdentifier()] = $new;
+				$many[$entry->getRowIdentifier()] = $entry;
 			else
-				$many[] = $new;
+				$many[] = $entry;
 		}
 
 		return $many;
 	}
 
-	
+
 	/**
 	 * Delete a single object by a MySQL WHERE clause
 	 * @param string $where MySQL WHERE clause
@@ -314,7 +339,7 @@ abstract class MOMBase
 		if (empty($where))
 			throw new BaseException(BaseException::OBJECTS_NOT_DELETED);
 
-		$sql = 
+		$sql =
 			'DELETE FROM `'.self::getDbName().'`.`'.static::TABLE.'`'.
 			' WHERE '.$where;
 
@@ -329,8 +354,35 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Updates an obejct from object methods 
-	  * @param string[] $row \mysqli_result->fetch_assoc
+	  * Get object count
+	  * @throws \util\DatabaseException
+	  * @return int
+	  */
+	public static function getCount()
+	{
+		return self::getCountByWhere();
+	}
+
+	/**
+	  * Get object count by a sql where clause
+	  * @param string $where
+	  * @throws \util\DatabaseException
+	  * @return int
+	  */
+	public static function getCountByWhere($where = NULL)
+	{
+		$sql = 'SELECT COUNT(*) FROM `'.self::getDbName().'`.`'.static::TABLE.'`';
+
+		if (!empty($where))
+			$sql .= ' WHERE '.$where;
+
+		$result = self::queryStatic($sql);
+		return $result->fetchColumn(0);
+	}
+
+	/**
+	  * Updates an obejct from object methods
+	  * @param string[] $row \PDO_result->fetch_assoc
 	  */
 	protected function fillByObject($row)
 	{
@@ -339,8 +391,8 @@ abstract class MOMBase
 
 	/**
 	  * Creates an object from static methods
-	  * Binds the static mysqli connection to the object
-	  * @param string[] $row \mysqli_result->fetch_assoc
+	  * Binds the static PDO connection to the object
+	  * @param string[] $row \PDO_result->fetch_assoc
 	  */
 	protected function fillByStatic($row)
 	{
@@ -350,10 +402,10 @@ abstract class MOMBase
 	}
 
 	/**
-	  * Fills object 
+	  * Fills object
 	  * Creates public vars on object with name of row key, and value of row value
 	  * Sets object to be old, meaning that its been fetched from database
-	  * @param string[] $row \mysqli_result->fetch_assoc
+	  * @param string[] $row \PDO_result->fetch_assoc
 	  */
 	protected function fill($row)
 	{
@@ -362,6 +414,7 @@ abstract class MOMBase
 			$this->$key = $value;
 		}
 		$this->__mbNewObject = FALSE;
+		$this->__mbSelector = static::getSelector($row);
 	}
 
 	/**
@@ -395,43 +448,69 @@ abstract class MOMBase
 		}
 		catch (MysqlException $e)
 		{
-			throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class().' tried to delete an object', $e);
+			throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class().' tried to delete an object, error: '.$e->getMysqlError(), $e);
 		}
 	}
 
 	/**
-	  * Describes the class using DESCRIBE
+	  * Describes the called class using DESCRIBE
 	  * Caches model in static cache and in Memcache(if enabled)
 	  * Used when creating new objects, for default values and field info
 	  * Entry in memcache will be keyed using classname and CLASS_REVISION
-	  * @param string $class classname of the extending class
+	  * @return array<string, string>
 	  */
-	private function describe($class)
+	private function describe()
 	{
-		if (!array_key_exists($class, self::$__mbDescriptions))
+		$class = get_called_class();
+		if (array_key_exists($class, self::$__mbDescriptions) && is_array(self::$__mbDescriptions[$class]))
 		{
-			$selector = self::getMemcacheKey('DESCRIPTION');
-			if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
-			{
-				self::$__mbDescriptions[$class] = $entry;
-			}
-			else
-			{
-				$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
-				$res = $this->queryObject($sql);
-				$description = array();
-				while (($row = $res->fetch_assoc()) !== NULL)
-				{
-					// If Field start is equal to self::RESERVED_PREFIX
-					if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
-						throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+			if (static::VERBOSE_STATIC_CACHE)
+				error_log('Getting static description for class: '.$class);
 
-					$description[$row['Field']] = $row;
-				}
-				self::$__mbDescriptions[$class] = $description;
-				self::setMemcacheEntry($selector, $description);
-			}
+			return self::$__mbDescriptions[$class];
 		}
+
+		if (($entry = self::getMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR)) !== FALSE)
+		{
+			self::$__mbDescriptions[$class] = $entry;
+			return $entry;
+		}
+
+		$sql = 'DESCRIBE `'.self::getDbName().'`.`'.static::TABLE.'`';
+		$res = $this->queryObject($sql);
+		$description = array();
+		while (($row = $res->fetch()) !== FALSE)
+		{
+			// If Field start is equal to self::RESERVED_PREFIX
+			if (strpos($row['Field'], self::RESERVED_PREFIX) === 0)
+				throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class.' has a column named '.$row['Field'].', __mb is reserved for internal stuff');
+
+			$description[$row['Field']] = $row;
+		}
+
+		self::setMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR, $description);
+
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Setting static description for class: '.$class);
+		self::$__mbDescriptions[$class] = $description;
+
+		return $description;
+	}
+
+	/**
+	  * Uncache the description of the class in static and memcache
+	  * This method is used for unit tests and expert level usage
+	  * @tags advanced
+	  */
+	public function unDescribe()
+	{
+		$class = get_called_class();
+
+		self::deleteMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR);
+
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Deleting static description for class: '.$class);
+		static::$__mbDescriptions[$class] = null;
 	}
 
 	/**
@@ -500,39 +579,84 @@ abstract class MOMBase
 	/**
 	  * Query method for static methods
 	  * @param string $sql
-	  * @param enum(\MYSQLI_USE_RESULT, \MYSQLI_STORE_RESULT) $resultmode
-	  * @return mixed mysqli_result or TRUE
+	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLException
 	  */
-	protected static function queryStatic($sql, $resultmode = \MYSQLI_STORE_RESULT)
+	protected static function queryStatic($sql)
 	{
-		return self::query(self::getConnection(), $sql, $resultmode);
+		return static::query(self::getConnection(), $sql);
 	}
 
 	/**
-	  * Query method for objects, always uses the objects specific mysqli connection
+	  * Query method for objects, always uses the objects specific PDO connection
 	  * @param string $sql
-	  * @param enum(\MYSQLI_USE_RESULT, \MYSQLI_STORE_RESULT) $resultmode
-	  * @return mixed mysqli_result or TRUE
+	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLuException
 	  */
-	protected function queryObject($sql, $resultmode = \MYSQLI_STORE_RESULT)
+	protected function queryObject($sql)
 	{
-		return self::query($this->__mbConnection, $sql, $resultmode);
+		return static::query($this->__mbConnection, $sql);
 	}
 
 	/**
 	  * Generic query method
-	  * @param mysqli $connection mysqli connection
-	  * @param enum(\MYSQLI_USE_RESULT, \MYSQLI_STORE_RESULT) $resultmode
-	  * @return mixed mysqli_result or TRUE
+	  * @param PDO $connection PDO connection
+	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLException
 	  */
-	private static function query($connection, $sql, $resultmode)
+	protected static function query($connection, $sql)
 	{
-		$result = $connection->query($sql, $resultmode);
-		if ($result === FALSE)
-			throw new MySQLException($sql, $connection->error, $connection->errno);
+		if (static::VERBOSE_SQL) {
+			error_log($sql);
+		}
+
+		try {
+			$result = $connection->query($sql, \PDO::FETCH_ASSOC);
+		} catch (\PDOException $e) {
+			throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+		}
+
+		return $result;
+	}
+
+	/**
+	  * Prepare method for static methods
+	  * @param string $sql
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLException
+	  */
+	protected static function prepareStatic($sql)
+	{
+		return static::prepare(self::getConnection(), $sql);
+	}
+
+	/**
+	  * Prepare method for objects, always uses the objects specific PDO connection
+	  * @param string $sql
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLuException
+	  */
+	protected function prepareObject($sql)
+	{
+		return static::prepare($this->__mbConnection, $sql);
+	}
+
+	/**
+	  * Generic query method
+	  * @param PDO $connection PDO connection
+	  * @return mixed PDOStatement or FALSE
+	  * @throws MySQLException
+	  */
+	protected static function prepare($connection, $sql)
+	{
+		if (static::VERBOSE_SQL)
+			error_log($sql);
+
+		try {
+			$result = $connection->prepare($sql);
+		} catch (\PDOException $e) {
+			throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+		}
 
 		return $result;
 	}
@@ -540,43 +664,38 @@ abstract class MOMBase
 	/**
 	  * Escape object value
 	  * Everything is escaped as strings except for NULL
-	  * @param string $field 
-	  * @param string $type
-	  * @return string
 	  */
-	protected function escapeObjectPair($field, $type = 'varchar')
+	protected function escapeObjectPair(string $field, string $type = 'varchar') : string
 	{
-		if ($this->$field !== NULL)
-		{
-			if (strpos('int', $type) !== FALSE)
-				return '`'.$field.'` = '.(int)$this->$field;
-
-			return '`'.$field.'` = '.$this->escapeObject($this->$field);
-		}
-		else
+		if ($this->$field === NULL) {
 			return '`'.$field.'` = NULL';
+		}
+
+		if (strpos($type, 'int') !== false) {
+			return '`'.$field.'` = '.(int)$this->$field;
+		}
+
+		return '`'.$field.'` = '.$this->escapeObject($this->$field);
 	}
 
 	/**
-	  * Escape a value using static mysqli connection
+	  * Escape a value using static PDO connection
 	  * @param string $value
-	  * @param bool $quote wrap value in single quote
 	  * @return string
 	  */
-	protected static function escapeStatic($value, $quote = TRUE)
+	protected static function escapeStatic($value)
 	{
-		return self::escape(self::getConnection(), $value, $quote);
+		return self::escape(self::getConnection(), $value);
 	}
 
 	/**
-	  * Escape a value using object mysqli connection
+	  * Escape a value using object PDO connection
 	  * @param string $value
-	  * @param bool $quote wrap value in single quote
 	  * @return string
 	  */
-	protected function escapeObject($value, $quote = TRUE)
+	protected function escapeObject($value)
 	{
-		return self::escape($this->__mbConnection, $value, $quote);
+		return self::escape($this->__mbConnection, $value);
 	}
 
 	/**
@@ -589,32 +708,29 @@ abstract class MOMBase
 		$str = 'Instance of '.$class.':'."\n";
 		foreach (self::$__mbDescriptions[$class] as $field)
 		{
-			$str .= $field['Field'].': '.var_export($this->$field['Field'], TRUE)."\n";
+			$str .= $field['Field'].': '.var_export($this->{$field['Field']}, TRUE)."\n";
 		}
 
 		return $str;
 	}
 
 	/**
-	  * Escape a value according to mysqli connection
-	  * @param mysqli $connection mysql connection
-	  * @param string $value
-	  * @param bool $quote wrap value in single quote
-	  * @return string
+	  * Escape a value according to PDO connection
+	  * @param mixed $value
+	  * @return mixed
 	  */
-	private static function escape($connection, $value, $quote = TRUE)
+	private static function escape(\PDO $connection, $value)
 	{
-		if ($quote)
-			return '\''.$connection->real_escape_string($value).'\'';
-		else
-			return $connection->real_escape_string($value);
+		if (!$connection instanceof \PDO)
+			throw new BaseException(BaseException::MISSING_CONNECTION);
+		return $connection->quote($value);
 	}
 
 	/**
-	  * Get a mysqli connection to a database server, either from classname based connections or the global connection
+	  * Get a PDO connection to a database server, either from classname based connections or the global connection
 	  * If none is found an exception is thrown
 	  * @throws MOMBaseException
-	  * @return mysqli
+	  * @return PDO
 	  */
 	private static function getConnection()
 	{
@@ -631,10 +747,10 @@ abstract class MOMBase
 	/**
 	  * Set a database handler for the class
 	  * If called directly on MOM classes, connection is set globally
-	  * @param \mysqli $connection mysqli connection
-	  * @param bool $global set the mysqli connection globally
+	  * @param \PDO $connection PDO connection
+	  * @param bool $global set the PDO connection globally
 	  */
-	public static function setConnection(\mysqli $connection, $global = FALSE)
+	public static function setConnection(\PDO $connection, $global = FALSE)
 	{
 		$class = get_called_class();
 		if ($global || in_array($class, self::$__mbProtectedClasses) === TRUE)
@@ -650,7 +766,7 @@ abstract class MOMBase
 	  */
 	private static function getMemcache()
 	{
-		$memcache = self::getNestedByClass(self::$__mbConnections, get_called_class());
+		$memcache = self::getNestedByClass(self::$__mbMemcaches, get_called_class());
 		if ($memcache !== FALSE)
 			return $memcache;
 
@@ -677,14 +793,24 @@ abstract class MOMBase
 			static::$__mbMemcaches[$class] = $options;
 	}
 
+	/** Check if an object is new
+	  *
+	  * New objects has never been saved to the database
+	  * @return bool
+	  */
+	public function isNew()
+	{
+		return $this->__mbNewObject;
+	}
+
 	/**
 	  * Get the internal memcache timestamp
 	  * This is set on the object once its added to memcache
 	  * @return int
 	  */
-	public function getMemcacheTimestamp()
+	public function getSerializeTimestamp()
 	{
-		return $this->__mbMemcacheTimestamp;
+		return $this->__mbSerializeTimestamp;
 	}
 
 	/**
@@ -698,6 +824,55 @@ abstract class MOMBase
 	}
 
 	/**
+	  * Get cached entry from either static or memcache
+	  * @param string $selector
+	  * @return mixed object|false
+	  */
+	protected static function getCacheEntry($selector)
+	{
+		// early return from static cache
+		if (($entry = self::getStaticEntry($selector)) !== FALSE)
+			return $entry;
+
+		// early return from memcache
+		if (($entry = self::getMemcacheEntry($selector)) !== FALSE)
+		{
+			self::setStaticEntry($selector, $entry);
+			return $entry;
+		}
+
+		return FALSE;
+	}
+
+	/**
+	  * Set cache entry for static and memcache
+	  * @param string $selector
+	  * @param object $object
+	  */
+	protected static function setCacheEntry($selector, $object)
+	{
+		/**
+		  * Cache fetched object
+		  * Objects that are NULL will be store in static cache but not memcache
+		  * To reselect the same non exsistant element during a session is unnessesary but to put it in memcache would be unwise.
+		  */
+		self::setStaticEntry($selector, $object);
+		if ($object !== NULL)
+			self::setMemcacheEntry($selector, $object);
+	}
+
+	/**
+	  * Delete entries from memcache and static cache
+	  * @param string $selector
+	  * @param bool $customSelector overwrites prepended string which is normally added to memcache selector
+	  */
+	protected function deleteCacheEntry($selector, $customSelector = false)
+	{
+		$this->deleteMemcacheEntry($selector, $customSelector);
+		self::deleteStaticEntry($selector);
+	}
+
+	/**
 	  * Get entry from static cache
 	  * @param string $selector
 	  * @return object, object[] or FALSE if no data is found
@@ -708,7 +883,11 @@ abstract class MOMBase
 		{
 			$class = get_called_class();
 			if (isset(self::$__mbStaticCache[$class][$selector]))
+			{
+				if (static::VERBOSE_STATIC_CACHE)
+					error_log('Getting static entry with class: '.$class.' and selector: '.$selector);
 				return self::$__mbStaticCache[$class][$selector];
+			}
 		}
 
 		return FALSE;
@@ -731,9 +910,11 @@ abstract class MOMBase
 				foreach ($value as $element)
 				{
 					if ($element instanceOf MOMBase)
-						$value->__mbStaticCacheTimestamp = time();
+						$element->__mbStaticCacheTimestamp = time();
 				}
 			}
+			if (static::VERBOSE_STATIC_CACHE)
+				error_log('Setting static entry with class: '.$class.' and selector: '.$selector);
 			self::$__mbStaticCache[$class][$selector] = $value;
 		}
 	}
@@ -747,8 +928,22 @@ abstract class MOMBase
 		if (static::useStaticCache())
 		{
 			$class = get_called_class();
+			if (static::VERBOSE_STATIC_CACHE)
+				error_log('Deleting static entry with class: '.$class.' and selector: '.$selector);
 			unset(self::$__mbStaticCache[$class][$selector]);
 		}
+	}
+
+	/**
+	  * Allow static cache to be flushed for an entire class
+	  */
+	public static function flushStaticEntries()
+	{
+		$class = get_called_class();
+		if (static::VERBOSE_STATIC_CACHE)
+			error_log('Deleting all static entries with class: '.$class);
+
+		self::$__mbStaticCache[$class] = null;
 	}
 
 	/**
@@ -760,26 +955,24 @@ abstract class MOMBase
 	{
 		if (static::useMemcache())
 		{
-			if ($value instanceOf MOMBase)
-				$value->__mbMemcacheTimestamp = time();
-			else if (is_array($value))
-			{
-				foreach ($value as $element)
-				{
-					if ($element instanceOf MOMBase)
-						$element->__mbMemcacheTimestamp = time();
-				}
-			}
-
+			$key = self::getMemcacheKey($selector);
 			if ($context == self::CONTEXT_STATIC)
 			{
 				if (($memcache = self::getMemcache()) !== FALSE)
-					$memcache['memcache']->set(self::getMemcacheKey($selector), $value, $memcache['expiration']);
+				{
+					if (static::VERBOSE_MEMCACHE)
+						error_log('Setting memcache entry with selector: '.$key);
+					$memcache['memcache']->set($key, $value, $memcache['expiration']);
+				}
 			}
 			else if ($context == self::CONTEXT_OBJECT)
 			{
 				if ($value->__mbMemcache !== FALSE)
-					$value->__mbMemcache['memcache']->set(self::getMemcacheKey($selector), $value, $value->__mbMemcache['expiration']);
+				{
+					if (static::VERBOSE_MEMCACHE)
+						error_log('Setting memcache entry with selector: '.$key);
+					$value->__mbMemcache['memcache']->set($key, $value, $value->__mbMemcache['expiration']);
+				}
 			}
 		}
 	}
@@ -787,29 +980,43 @@ abstract class MOMBase
 	/**
 	  * Get an entry from memcache
 	  * @param string $selector
+	  * @param \PDO $connection PDO connection
 	  * @return data will return FALSE on error or when memcache is not enabled
 	  */
-	protected static function getMemcacheEntry($selector)
+	protected static function getMemcacheEntry($selector, \PDO $connection = NULL)
 	{
-		if (static::useMemcache())
-		{
-			if (($memcache = self::getMemcache()) !== FALSE)
-				return $memcache['memcache']->get(self::getMemcacheKey($selector));
-		}
+		if (!static::useMemcache())
+			return FALSE;
 
-		return FALSE;
+		if (($memcache = self::getMemcache()) === FALSE)
+			return FALSE;
+
+		$key = self::getMemcacheKey($selector);
+		$data = $memcache['memcache']->get($key);
+		if ($data === FALSE)
+			return FALSE;
+
+		if (static::VERBOSE_MEMCACHE)
+			error_log('Got memcache entry with selector: '.$key);
+		return $data;
 	}
 
 	/**
 	  * Delete an entry in memcache
 	  * @param string $selector
+	  * @param bool $customSelector
 	  */
-	protected function deleteMemcacheEntry($selector)
+	protected function deleteMemcacheEntry($selector, $customSelector = false)
 	{
 		if (static::useMemcache())
 		{
 			if ($this->__mbMemcache !== FALSE)
-				$this->__mbMemcache['memcache']->delete(self::getMemcacheKey($selector));
+			{
+				$key = self::getMemcacheKey($selector, $customSelector);
+				if (static::VERBOSE_MEMCACHE)
+					error_log('Deleting memcache entry with selector: '.$key);
+				$this->__mbMemcache['memcache']->delete($key);
+			}
 		}
 	}
 
@@ -817,10 +1024,14 @@ abstract class MOMBase
 	  * Get the memcache key for the specified selector
 	  * Prepends called class name
 	  * @param string $selector
+	  * @param bool $customSelector
 	  * @return string
 	  */
-	protected static function getMemcacheKey($selector)
+	protected static function getMemcacheKey($selector, $customSelector = false)
 	{
+		if ($customSelector)
+			return $selector;
+
 		return get_called_class().'_'.static::CLASS_REVISION.'_'.$selector;
 	}
 
@@ -847,7 +1058,7 @@ abstract class MOMBase
 		else
 			return FALSE;
 	}
-	
+
 	/**
 	  * Checks if the extending class has needed info to use MOMBase
 	  * @param string $classname classname of the extending class
@@ -887,5 +1098,45 @@ abstract class MOMBase
 			throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class.' did not match any properties (resulted in infinite loop)');
 
 		return self::getNestedByClass($properties, $class, ++$iteration);
+	}
+
+	/**
+	  * Serialize object for memcache storage
+	  * @return string serialized representation of object
+	  */
+	public function serialize()
+	{
+		$class = get_called_class();
+		$data = [];
+		foreach (self::$__mbDescriptions[$class] as $field)
+		{
+			$data[$field['Field']] = $this->{$field['Field']};
+		}
+		$this->__mbSerializeTimestamp = time();
+		$data['__mbSerializeTimestamp'] = $this->__mbSerializeTimestamp;
+		$data['__mbNewObject'] = $this->__mbNewObject;
+		$data['__mbSelector'] = $this->__mbSelector;
+
+		return serialize($data);
+	}
+
+	/**
+	  * Unserialize data to recreate object
+	  * When object is loaded from serialized form default connection and memcache is restored
+	  * @param string $data serialized data
+	  */
+	public function unserialize($data)
+	{
+		$this->__mbConnection = self::getConnection();
+		$description = $this->describe();
+		$data = unserialize($data);
+		foreach ($description as $field)
+		{
+			$this->{$field['Field']} = $data[$field['Field']];
+		}
+		$this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
+		$this->__mbNewObject = $data['__mbNewObject'];
+		$this->__mbSelector = $data['__mbSelector'];
+		$this->__mbMemcache = self::getMemcache();
 	}
 }
