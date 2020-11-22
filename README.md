@@ -184,7 +184,7 @@ In order to run the tests, the following needs to be satisfied:
 
 Build the docker environment using
  ./docker/build_container
- ./docker/bootstrap_container /path/to/MOM/
+ ./docker/bootstrap_container /absolute/path/to/MySQL-Object-Model/
 
 Run ./run_tests to start the tests within the docker env.
  ./run_tests

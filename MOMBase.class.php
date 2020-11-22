@@ -156,7 +156,7 @@ abstract class MOMBase implements \Serializable
 				$this->__mbMemcache = self::getMemcache();
 		}
 
-		$description = $this->describe();
+		$description = self::describe();
 
 		foreach ($description as $field)
 		{
@@ -259,12 +259,13 @@ abstract class MOMBase implements \Serializable
 	  * @param bool $keyed if set, returns an associated array with unique key as array key
 	  * @param int $limit MySQL LIMIT clause
 	  * @param int $offset MySQL LIMIT clause (offset)
+	  * @param bool $buffered Use MySQL buffered query
 	  * @throws \util\DatabaseException
 	  * @return object[]
 	  */
-	public static function getAll ($order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL)
+	public static function getAll ($order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL, $buffered = true)
 	{
-		return self::getAllByWhereGeneric(NULL, $order, $keyed, $limit, $offset);
+		return self::getAllByWhereGeneric(NULL, $order, $keyed, $limit, $offset, $buffered);
 	}
 
 	/**
@@ -289,10 +290,11 @@ abstract class MOMBase implements \Serializable
 	  * @param bool $keyed if set, returns an associated array with unique key as array key
 	  * @param int $limit MySQL LIMIT clause
 	  * @param int $offset MySQL LIMIT clause (offset)
+	  * @param bool $buffered Use MySQL buffered query
 	  * @throws \util\DatabaseException
 	  * @return object[]
 	 */
-	protected static function getAllByWhereGeneric($where = NULL, $order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL)
+	protected static function getAllByWhereGeneric($where = NULL, $order = NULL, $keyed = FALSE, $limit = NULL, $offset = NULL, $buffered = true)
 	{
 		$many = array();
 
@@ -307,7 +309,7 @@ abstract class MOMBase implements \Serializable
 		if ($limit !== NULL || $offset !== NULL)
 			$sql .= ' LIMIT '.(int)$offset.','.(int)$limit;
 
-		$res = self::queryStatic($sql);
+		$res = self::queryStatic($sql, $buffered);
 		while (($row = $res->fetch()) !== false)
 		{
 			$selector = static::getSelector($row);
@@ -579,12 +581,16 @@ abstract class MOMBase implements \Serializable
 	/**
 	  * Query method for static methods
 	  * @param string $sql
+	  * @param bool $buffered Use MySQL buffered query
 	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLException
 	  */
-	protected static function queryStatic($sql)
+	protected static function queryStatic($sql, $buffered = true)
 	{
-		return static::query(self::getConnection(), $sql);
+		if (!$buffered)
+			self::describe();
+
+		return static::query(self::getConnection(), $sql, $buffered);
 	}
 
 	/**
@@ -601,19 +607,26 @@ abstract class MOMBase implements \Serializable
 	/**
 	  * Generic query method
 	  * @param PDO $connection PDO connection
+	  * @param string $sql SQL Statement
+	  * @param bool $buffered Use MySQL buffered query
 	  * @return mixed PDO_result or TRUE
 	  * @throws MySQLException
 	  */
-	protected static function query($connection, $sql)
+	protected static function query($connection, $sql, $buffered = true)
 	{
 		if (static::VERBOSE_SQL) {
 			error_log($sql);
 		}
 
+		if (!$buffered)
+			$connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+
 		try {
 			$result = $connection->query($sql, \PDO::FETCH_ASSOC);
 		} catch (\PDOException $e) {
 			throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+		} finally {
+			$connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 		}
 
 		return $result;
@@ -1128,7 +1141,7 @@ abstract class MOMBase implements \Serializable
 	public function unserialize($data)
 	{
 		$this->__mbConnection = self::getConnection();
-		$description = $this->describe();
+		$description = self::describe();
 		$data = unserialize($data);
 		foreach ($description as $field)
 		{

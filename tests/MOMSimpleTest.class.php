@@ -293,4 +293,11 @@ class MOMSimpleTest extends \PHPUnit\Framework\TestCase
 		$object2->save();
 		$this->assertEquals($object2->{MOMSimpleActual::COLUMN_IS_IT_ON}, 1);
 	}
+
+	public function testUnbufferedSql()
+	{
+		$objects = MOMSimpleActual::getAll(null, false, null, null, false);
+
+		$this->assertEquals(count($objects), 3);
+	}
 }
