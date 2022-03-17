@@ -461,7 +461,7 @@ abstract class MOMBase implements \Serializable
 	  * Entry in memcache will be keyed using classname and CLASS_REVISION
 	  * @return array<string, string>
 	  */
-	private function describe()
+	private static function describe()
 	{
 		$class = get_called_class();
 		if (array_key_exists($class, self::$__mbDescriptions) && is_array(self::$__mbDescriptions[$class]))
