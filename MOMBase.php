@@ -240,7 +240,6 @@ abstract class MOMBase implements \Serializable
       * @param string $where MySQL where clause
       * @param string $order MySQL order clause
       * @return object
-      * @throws \util\DatabaseException
       */
     public static function getOne($where = null, $order = null)
     {
@@ -260,7 +259,6 @@ abstract class MOMBase implements \Serializable
       * @param int $limit MySQL LIMIT clause
       * @param int $offset MySQL LIMIT clause (offset)
       * @param bool $buffered Use MySQL buffered query
-      * @throws \util\DatabaseException
       * @return object[]
       */
     public static function getAll($order = null, $keyed = false, $limit = null, $offset = null, $buffered = true)
@@ -275,7 +273,6 @@ abstract class MOMBase implements \Serializable
       * @param bool $keyed if set, returns an associated array with unique key as array key
       * @param int $limit MySQL LIMIT clause
       * @param int $offset MySQL LIMIT clause (offset)
-      * @throws \util\DatabaseException
       * @return object[]
       */
     public static function getAllByWhere($where, $order = null, $keyed = false, $limit = null, $offset = null)
@@ -291,7 +288,6 @@ abstract class MOMBase implements \Serializable
       * @param int $limit MySQL LIMIT clause
       * @param int $offset MySQL LIMIT clause (offset)
       * @param bool $buffered Use MySQL buffered query
-      * @throws \util\DatabaseException
       * @return object[]
      */
     protected static function getAllByWhereGeneric($where = null, $order = null, $keyed = false, $limit = null, $offset = null, $buffered = true)
@@ -358,7 +354,6 @@ abstract class MOMBase implements \Serializable
 
     /**
       * Get object count
-      * @throws \util\DatabaseException
       * @return int
       */
     public static function getCount()
@@ -369,7 +364,6 @@ abstract class MOMBase implements \Serializable
     /**
       * Get object count by a sql where clause
       * @param string $where
-      * @throws \util\DatabaseException
       * @return int
       */
     public static function getCountByWhere($where = null)
