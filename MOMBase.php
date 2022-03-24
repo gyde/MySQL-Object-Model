@@ -468,7 +468,7 @@ abstract class MOMBase implements \Serializable
         }
 
         $sql = 'DESCRIBE `' . self::getDbName() . '`.`' . static::TABLE . '`';
-        $res = $this->queryObject($sql);
+        $res = self::queryStatic($sql);
         $description = array();
         while (($row = $res->fetch()) !== false) {
             // If Field start is equal to self::RESERVED_PREFIX
