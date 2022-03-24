@@ -1,36 +1,32 @@
 <?php
-/*NAMESPACE*/
 
-set_include_path('.');
+namespace Gyde\MOM;
 
-function MOMAutoload ($className)
+function MOMAutoload($className)
 {
-    static $includeSegments = NULL;
+    static $includeSegments = null;
 
-	if ($includeSegments === NULL)
-		$includeSegments = explode(PATH_SEPARATOR, get_include_path());
+    if ($includeSegments === null) {
+        $includeSegments = explode(PATH_SEPARATOR, __DIR__);
+    }
 
-    $message = 'Classname: '.$className."\n";
+    $message = 'Classname: ' . $className . "\n";
 
-	$basename = str_replace('\\', '/', $className).'.php';
-	foreach ($includeSegments as $includeSegment)
-	{
-		$filename = $includeSegment.'/'.$basename;
-		$message .= 'filename: '.$filename;
+    $basename = str_replace('\\', '/', $className) . '.php';
+    foreach ($includeSegments as $includeSegment) {
+        $filename = $includeSegment . '/' . $basename;
+        $message .= 'filename: ' . $filename;
 
-		if (file_exists($filename))
-		{
-			$message .= ' included'."\n";
-			require_once($filename);
-			break;
-		}
-		else
-			$message .= "\n";
-	}
+        if (file_exists($filename)) {
+            $message .= ' included';
+            require_once($filename);
+            break;
+        }
 
-	//error_log($message);
+        $message .= "\n";
+    }
+
+    //error_log($message);
 }
 
 spl_autoload_register('MOMAutoload');
-
-?>
