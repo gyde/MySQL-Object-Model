@@ -31,7 +31,7 @@ class MOMSimpleTest extends \PHPUnit\Framework\TestCase
 
 	private static function createTable($dbName, $tableName)
 	{
-		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName;
+		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.'`';
 		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.MOMSimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.MOMSimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.

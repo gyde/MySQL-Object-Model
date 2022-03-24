@@ -34,7 +34,7 @@ class ExtensionTest extends \PHPUnit\Framework\TestCase
 
 	private static function createTable($dbName, $tableName, $primaryKey)
 	{
-		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.';';
+		$sqls[] = 'DROP TABLE IF EXISTS `'.$dbName.'`.`'.$tableName.'`;';
 		$sqls[] = 'CREATE TABLE `'.$dbName.'`.`'.$tableName.'` ('.
 			' `'.$primaryKey.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `state` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
