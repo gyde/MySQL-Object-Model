@@ -5,14 +5,14 @@ set_include_path('.');
 
 function MOMAutoload ($className)
 {
-    static $includeSegments = NULL; 
+    static $includeSegments = NULL;
 
 	if ($includeSegments === NULL)
 		$includeSegments = explode(PATH_SEPARATOR, get_include_path());
 
     $message = 'Classname: '.$className."\n";
 
-	$basename = str_replace('\\', '/', $className).'.class.php';
+	$basename = str_replace('\\', '/', $className).'.php';
 	foreach ($includeSegments as $includeSegment)
 	{
 		$filename = $includeSegment.'/'.$basename;
