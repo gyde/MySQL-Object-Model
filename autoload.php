@@ -2,8 +2,7 @@
 
 namespace Gyde\MOM;
 
-function MOMAutoload($className)
-{
+spl_autoload_register(function ($className) {
     static $includeSegments = null;
 
     if ($includeSegments === null) {
@@ -26,7 +25,5 @@ function MOMAutoload($className)
         $message .= "\n";
     }
 
-    //error_log($message);
-}
-
-spl_autoload_register('MOMAutoload');
+    print($message."\n");
+});
