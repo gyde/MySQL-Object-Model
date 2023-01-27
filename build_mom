@@ -22,6 +22,6 @@ fi
 
 echo "Building MySQL-Object-Model with namespace: $1"
 
-for a in MOM*.class.php; do
-	sed 's/\/\*NAMESPACE\*\//namespace '$1';/g' $a | sed 's/\/\*USE_NAMESPACE\*\//'$1'\\/g' > ${BUILD_DIR}/$a
+for a in MOM*.php; do
+	sed 's/Gyde\\MOM/'$1'/g' $a > ${BUILD_DIR}/$a
 done
