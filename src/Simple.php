@@ -1,12 +1,12 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-class MOMSimple extends MOMBase
+class Simple extends Base
 {
     /**
       * Static object cache
-      * MOMSimple supports storing objects selected by id in a static cache
+      * Simple supports storing objects selected by id in a static cache
       * @var array<classname, array<primary_key_value, Object>>
       */
     protected static $__mbObjectCache = array();
@@ -28,8 +28,8 @@ class MOMSimple extends MOMBase
       * Get by primary key
       * @param mixed $id
       * @param bool $allowNull allow null to be return when empty id is provided
-      * @throws MOMBaseException
-      * @throws MOMMySQLException
+      * @throws BaseException
+      * @throws MySQLException
       * @return object
       */
     public static function getById($id, $allowNull = false)
@@ -43,7 +43,7 @@ class MOMSimple extends MOMBase
         }
 
         if (empty($id)) {
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_FOUND, get_called_class() . '::' . __FUNCTION__ . ' got empty primary key value');
+            throw new BaseException(BaseException::OBJECT_NOT_FOUND, get_called_class() . '::' . __FUNCTION__ . ' got empty primary key value');
         }
 
         $selector = static::getSelector([static::COLUMN_PRIMARY_KEY => $id]);
@@ -67,7 +67,7 @@ class MOMSimple extends MOMBase
     /**
       * Get mysql row by primary key
       * @param mixed $id
-      * @throws MOMMySQLException
+      * @throws MySQLException
       * @return resource(mysql resource) or false on failure
       */
     private function getRowById($id)
@@ -82,7 +82,7 @@ class MOMSimple extends MOMBase
     /**
       * Get mysql row by primary key
       * @param mixed $id escaped
-      * @throws MOMMySQLException
+      * @throws MySQLException
       * @return resource(mysql resource) or false on failure
       */
     private static function getRowByIdStatic($id)
@@ -109,8 +109,8 @@ class MOMSimple extends MOMBase
     /**
       * Save the object
       * @param mixed $metaData data needed by save method
-      * @throws MOMBaseException
-      * @see MOMBase
+      * @throws BaseException
+      * @see Base
       */
     public function save($metaData = null)
     {
@@ -126,7 +126,7 @@ class MOMSimple extends MOMBase
         }
 
         if (($row = self::getRowById($id)) === false) {
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_UPDATED, get_called_class() . '->' . __FUNCTION__ . ' failed to update object with metadata from database');
+            throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class() . '->' . __FUNCTION__ . ' failed to update object with metadata from database');
         }
 
         // fillByObject() will change the return value of isNew()
@@ -143,14 +143,14 @@ class MOMSimple extends MOMBase
     /**
      * Delete the object
      * Will throw exception on all failures, if no exception, then object is deleted
-     * @throws MOMBaseException
+     * @throws BaseException
      */
     public function delete()
     {
         $keyname = static::COLUMN_PRIMARY_KEY;
         $id = $this->$keyname;
         if (empty($id)) {
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_DELETED, get_called_class() . '->' . __FUNCTION__ . ' failed to delete, primary key was empty');
+            throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class() . '->' . __FUNCTION__ . ' failed to delete, primary key was empty');
         }
 
         $sql =
@@ -226,12 +226,12 @@ class MOMSimple extends MOMBase
 
     /**
       * Checks if the extending class has defined a primary key
-      * @throws MOMBaseException
+      * @throws BaseException
       */
     private static function hasPrimaryKey()
     {
         if (!defined('static::COLUMN_PRIMARY_KEY')) {
-            throw new MOMBaseException(MOMBaseException::PRIMARY_KEY_NOT_DEFINED, get_called_class() . ' has no COLUMN_PRIMARY_KEY const');
+            throw new BaseException(BaseException::PRIMARY_KEY_NOT_DEFINED, get_called_class() . ' has no COLUMN_PRIMARY_KEY const');
         }
     }
 

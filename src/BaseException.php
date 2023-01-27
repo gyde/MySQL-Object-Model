@@ -1,8 +1,8 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-class MOMBaseException extends MOMException
+class BaseException extends Exception
 {
     /**
       * EXCEPTION CONSTANTS BEGIN
@@ -41,7 +41,7 @@ class MOMBaseException extends MOMException
     public const MESSAGE_10 = 'When resursivly searching for properties within models, resursion level became to high';
 
     public const GET_SELECTOR_NOT_DEFINED = 11;
-    public const MESSAGE_11 = 'A static getSelector() method must be defined in classes extending MOMBase';
+    public const MESSAGE_11 = 'A static getSelector() method must be defined in classes extending Base';
 
     public const OBJECT_NOT_SAVED = 100;
     public const MESSAGE_100 = 'Object could not be saved (created/updated)';

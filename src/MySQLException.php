@@ -1,8 +1,8 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-class MOMMySQLException extends \Exception
+class MySQLException extends \Exception
 {
     public const ER_DUP_ENTRY = 1062;
     public const ER_LOCK_WAIT_TIMEOUT = 1205;
@@ -13,7 +13,7 @@ class MOMMySQLException extends \Exception
     private $mysqlErrno = null;
 
     /**
-      * Constructs a MOMMySQLException containing mysql error info
+      * Constructs a MySQLException containing mysql error info
       * @param string $mysqlQuery
       * @param string $mysqlError
       * @param int $mysqlErrno Mysql Error Code

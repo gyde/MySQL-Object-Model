@@ -15,10 +15,10 @@ class ExtensionTest extends \PHPUnit\Framework\TestCase
 	public static function setUpBeforeClass(): void
 	{
 		FooBar::setDbName('mom');
-		try 
+		try
 		{
 			self::$connection = Util::getConnection();
-			\tests\mom\MOMBase::setConnection(self::$connection, TRUE);
+			\tests\mom\Base::setConnection(self::$connection, TRUE);
 			self::createTable(Foo::getDbName(), Foo::TABLE, Foo::COLUMN_PRIMARY_KEY);
 			self::createTable(Bar::getDbName(), Bar::TABLE, Bar::COLUMN_PRIMARY_KEY);
 		}
@@ -29,7 +29,7 @@ class ExtensionTest extends \PHPUnit\Framework\TestCase
 		}
 
 		self::$memcache = Util::getMemcache();
-		\tests\mom\MOMBase::setMemcache(self::$memcache, 300);
+		\tests\mom\Base::setMemcache(self::$memcache, 300);
 	}
 
 	private static function createTable($dbName, $tableName, $primaryKey)

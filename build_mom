@@ -14,7 +14,7 @@ if [ $# -eq 2 ]; then
 	BUILD_DIR=$2;
 fi
 
-echo ${BUILD_DIR}
+echo "Build dir: ${BUILD_DIR}"
 
 if [ ! -d "${BUILD_DIR}" ]; then
 	mkdir -p ${BUILD_DIR};
@@ -22,6 +22,7 @@ fi
 
 echo "Building MySQL-Object-Model with namespace: $1"
 
-for a in MOM*.php; do
-	sed 's/Gyde\\MOM/'$1'/g' $a > ${BUILD_DIR}/$a
+SCRIPTPATH=$(dirname "$(readlink -f "$0")")
+for a in ${SCRIPTPATH}/src/*.php; do
+	sed 's/Gyde\\Mom/'$1'/g' $a > ${BUILD_DIR}/$(basename $a)
 done

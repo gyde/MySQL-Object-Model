@@ -1,8 +1,8 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-class MOMCompound extends MOMBase
+class Compound extends Base
 {
     /**
       * Constructs an object of the extending class using parent constructor
@@ -20,8 +20,8 @@ class MOMCompound extends MOMBase
     /**
       * Get by compound key
       * @param mixed[] $ids
-      * @throws MOMBaseException
-      * @throws MOMMySQLException
+      * @throws BaseException
+      * @throws MySQLException
       * @return object
       */
     public static function getByIds(array $ids)
@@ -51,8 +51,8 @@ class MOMCompound extends MOMBase
     /**
       * Save the object
       * @param mixed $metaData data needed by save method
-      * @throws MOMBaseException
-      * @see MOMBase
+      * @throws BaseException
+      * @see Base
       */
     public function save($metaData = null)
     {
@@ -66,7 +66,7 @@ class MOMCompound extends MOMBase
         }
 
         if (($row = self::getRowByIds($ids)) === null) {
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_UPDATED, get_called_class() . '->' . __FUNCTION__ . ' failed to update object with data from database');
+            throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class() . '->' . __FUNCTION__ . ' failed to update object with data from database');
         }
 
         // fillByObject() will change the return value of isNew()
@@ -83,7 +83,7 @@ class MOMCompound extends MOMBase
     /**
       * Delete the object
       * Will throw exceptions on all errors, if no exception, then object is deleted
-      * @throws MOMBaseException
+      * @throws BaseException
       */
     public function delete()
     {
@@ -158,7 +158,7 @@ class MOMCompound extends MOMBase
     /**
       * Get mysql row by primary key
       * @param mixed $id escaped
-      * @throws MOMMySQLException
+      * @throws MySQLException
       * @return resource(mysql resource) or null on failure
       */
     private function getRowByIds($ids)
@@ -173,7 +173,7 @@ class MOMCompound extends MOMBase
     /**
       * Get mysql row by primary key
       * @param mixed $id escaped
-      * @throws MOMMySQLException
+      * @throws MySQLException
       * @return resource(mysql resource) or null on failure
       */
     private static function getRowByIdsStatic($ids)
@@ -197,7 +197,7 @@ class MOMCompound extends MOMBase
         $description = static::$__mbDescriptions[get_called_class()];
         foreach (self::getCompoundKeys() as $key) {
             if (!isset($this->$key)) {
-                throw new MOMBaseException(MOMBaseException::COMPOUND_KEY_MISSING_VALUE, get_called_class() . '->' . __FUNCTION__ . ' failed to save object to database, ' . $key . ' is not set on object');
+                throw new BaseException(BaseException::COMPOUND_KEY_MISSING_VALUE, get_called_class() . '->' . __FUNCTION__ . ' failed to save object to database, ' . $key . ' is not set on object');
             }
 
             $wheres[] = $this->escapeObjectPair($key, $description[$key]['Type']);
@@ -217,7 +217,7 @@ class MOMCompound extends MOMBase
         $wheres = array();
         foreach (self::getCompoundKeys() as $key) {
             if (!array_key_exists($key, $ids)) {
-                throw new MOMBaseException(MOMBaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $key . ' is not present amoung ids');
+                throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $key . ' is not present amoung ids');
             }
 
             if ($ids[$key] !== null) {
@@ -267,25 +267,25 @@ class MOMCompound extends MOMBase
 
     /**
       * Checks if the extending class has defined a primary key
-      * @throws MOMBaseException
+      * @throws BaseException
       */
     private static function hasCompoundKeys()
     {
         if (!defined('static::COLUMN_COMPOUND_KEYS')) {
-            throw new MOMBaseException(MOMBaseException::COMPOUND_KEYS_NOT_DEFINED, get_called_class() . ' has no COLUMN_COMPOUND_KEYS const');
+            throw new BaseException(BaseException::COMPOUND_KEYS_NOT_DEFINED, get_called_class() . ' has no COLUMN_COMPOUND_KEYS const');
         }
     }
 
     /**
       * Validates that all compound keys are present in ids
       * @param array<string, mixed> $ids
-      * @throws MOMBaseException
+      * @throws BaseException
       */
     private static function validateIds($ids)
     {
         $difs = array_diff(self::getCompoundKeys(), array_keys($ids));
         if (count($difs) != 0) {
-            throw new MOMBaseException(MOMBaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $difs[0] . ' is not present amoung ids');
+            throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $difs[0] . ' is not present amoung ids');
         }
     }
 }

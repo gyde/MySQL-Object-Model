@@ -1,4 +1,5 @@
 *.swp
 build
 tests/mom
+tests/.phpunit.result.cache
 .gitconfig

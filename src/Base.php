@@ -1,8 +1,8 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-abstract class MOMBase implements \Serializable
+abstract class Base implements \Serializable
 {
     public const RESERVED_PREFIX = '__mb';
     public const GLOBAL_CONNECTION = '__mbGlobalConnection';
@@ -106,7 +106,7 @@ abstract class MOMBase implements \Serializable
       * nested extending class data
       * @var string[]
       */
-    protected static $__mbProtectedClasses = array('/*USE_NAMESPACE*/MOMBase','/*USE_NAMESPACE*/MOMSimple','/*USE_NAMESPACE*/MOMCompound');
+    protected static $__mbProtectedClasses = array(Base::class, Simple::class, Compound::class);
 
     /**
       * Static cache with all PDO connections
@@ -144,7 +144,7 @@ abstract class MOMBase implements \Serializable
 
         if ($memcache instanceof \Memcache) {
             if (!static::useMemcache()) {
-                throw new MOMBaseException(MOMBaseException::MEMCACHE_NOT_ENABLED_BUT_SET);
+                throw new BaseException(BaseException::MEMCACHE_NOT_ENABLED_BUT_SET);
             }
             $options = array('memcache' => $memcache, 'expiration' => (int)$memcacheExpiration);
             $this->__mbMemcache = $options;
@@ -169,9 +169,9 @@ abstract class MOMBase implements \Serializable
       * Save the object in the database
       * The object itself is updated with row data reselected
       * from the database, iorder to update default values from table definition
-      * If save fails a MOMBaseException should be thrown
+      * If save fails a BaseException should be thrown
       * @param mixed $metaData data needed by save method
-      * @throws MOMBaseException
+      * @throws BaseException
       */
     abstract public function save($metaData = null);
 
@@ -184,8 +184,8 @@ abstract class MOMBase implements \Serializable
 
     /**
       * Delete the object in the database
-      * If delete fails MOMBaseException should be thrown
-      * @throws MOMBaseException
+      * If delete fails BaseException should be thrown
+      * @throws BaseException
       */
     abstract public function delete();
 
@@ -198,12 +198,12 @@ abstract class MOMBase implements \Serializable
     /**
       * Get static cache and memcache selector
       * @param array $row
-      * @throws MOMBaseException
+      * @throws BaseException
       * @return string
       */
     protected static function getSelector($row)
     {
-        throw new MOMBaseException(MOMBaseException::GET_SELECTOR_NOT_DEFINED, get_called_class() . ' doesn\'t have a getSelector() method');
+        throw new BaseException(BaseException::GET_SELECTOR_NOT_DEFINED, get_called_class() . ' doesn\'t have a getSelector() method');
     }
 
     /**
@@ -229,7 +229,7 @@ abstract class MOMBase implements \Serializable
         }
 
         if (!defined('static::DB')) {
-            throw new MOMBaseException(MOMBaseException::MISSING_DB_DEFINITION, get_called_class() . ' has no DB defined');
+            throw new BaseException(BaseException::MISSING_DB_DEFINITION, get_called_class() . ' has no DB defined');
         }
 
         return static::DB;
@@ -333,12 +333,12 @@ abstract class MOMBase implements \Serializable
     /**
      * Delete a single object by a MySQL WHERE clause
      * @param string $where MySQL WHERE clause
-     * @throws MOMMySQLException
+     * @throws MySQLException
      */
     protected static function deleteAllByWhere($where)
     {
         if (empty($where)) {
-            throw new MOMBaseException(MOMBaseException::OBJECTS_NOT_DELETED);
+            throw new BaseException(BaseException::OBJECTS_NOT_DELETED);
         }
 
         $sql =
@@ -347,8 +347,8 @@ abstract class MOMBase implements \Serializable
 
         try {
             self::queryStatic($sql);
-        } catch (MOMBaseException $e) {
-            throw new MOMBaseException(MOMBaseException::OBJECTS_NOT_DELETED, $e->getMessage(), $e);
+        } catch (BaseException $e) {
+            throw new BaseException(BaseException::OBJECTS_NOT_DELETED, $e->getMessage(), $e);
         }
     }
 
@@ -422,12 +422,12 @@ abstract class MOMBase implements \Serializable
     {
         try {
             $this->queryObject($sql);
-        } catch (MOMMySQLException $e) {
-            if ($e->getMysqlErrno() == MOMMySQLException::ER_DUP_ENTRY) {
-                throw new MOMBaseException(MOMBaseException::OBJECT_DUPLICATED_ENTRY, get_called_class() . ' tried to created new object, but primary key already exists, error: ' . $e->getMysqlError(), $e);
+        } catch (MySQLException $e) {
+            if ($e->getMysqlErrno() == MySQLException::ER_DUP_ENTRY) {
+                throw new BaseException(BaseException::OBJECT_DUPLICATED_ENTRY, get_called_class() . ' tried to created new object, but primary key already exists, error: ' . $e->getMysqlError(), $e);
             }
 
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_SAVED, $e->getMysqlError(), $e);
+            throw new BaseException(BaseException::OBJECT_NOT_SAVED, $e->getMysqlError(), $e);
         }
     }
 
@@ -439,8 +439,8 @@ abstract class MOMBase implements \Serializable
     {
         try {
             $this->queryObject($sql);
-        } catch (MOMMySQLException $e) {
-            throw new MOMBaseException(MOMBaseException::OBJECT_NOT_DELETED, get_called_class() . ' tried to delete an object, error: ' . $e->getMysqlError(), $e);
+        } catch (MySQLException $e) {
+            throw new BaseException(BaseException::OBJECT_NOT_DELETED, get_called_class() . ' tried to delete an object, error: ' . $e->getMysqlError(), $e);
         }
     }
 
@@ -473,7 +473,7 @@ abstract class MOMBase implements \Serializable
         while (($row = $res->fetch()) !== false) {
             // If Field start is equal to self::RESERVED_PREFIX
             if (strpos($row['Field'], self::RESERVED_PREFIX) === 0) {
-                throw new MOMBaseException(MOMBaseException::RESERVED_VARIABLE_COMPROMISED, $class . ' has a column named ' . $row['Field'] . ', __mb is reserved for internal stuff');
+                throw new BaseException(BaseException::RESERVED_VARIABLE_COMPROMISED, $class . ' has a column named ' . $row['Field'] . ', __mb is reserved for internal stuff');
             }
 
             $description[$row['Field']] = $row;
@@ -569,7 +569,7 @@ abstract class MOMBase implements \Serializable
       * @param string $sql
       * @param bool $buffered Use MySQL buffered query
       * @return mixed PDO_result or true
-      * @throws MOMMySQLException
+      * @throws MySQLException
       */
     protected static function queryStatic($sql, $buffered = true)
     {
@@ -597,7 +597,7 @@ abstract class MOMBase implements \Serializable
       * @param string $sql SQL Statement
       * @param bool $buffered Use MySQL buffered query
       * @return mixed PDO_result or true
-      * @throws MOMMySQLException
+      * @throws MySQLException
       */
     protected static function query($connection, $sql, $buffered = true)
     {
@@ -612,7 +612,7 @@ abstract class MOMBase implements \Serializable
         try {
             $result = $connection->query($sql, \PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            throw new MOMMySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+            throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         } finally {
             $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
         }
@@ -624,7 +624,7 @@ abstract class MOMBase implements \Serializable
       * Prepare method for static methods
       * @param string $sql
       * @return mixed PDOStatement or false
-      * @throws MOMMySQLException
+      * @throws MySQLException
       */
     protected static function prepareStatic($sql)
     {
@@ -646,7 +646,7 @@ abstract class MOMBase implements \Serializable
       * Generic query method
       * @param PDO $connection PDO connection
       * @return mixed PDOStatement or false
-      * @throws MOMMySQLException
+      * @throws MySQLException
       */
     protected static function prepare($connection, $sql)
     {
@@ -657,7 +657,7 @@ abstract class MOMBase implements \Serializable
         try {
             $result = $connection->prepare($sql);
         } catch (\PDOException $e) {
-            throw new MOMMySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
+            throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         }
 
         return $result;
@@ -723,7 +723,7 @@ abstract class MOMBase implements \Serializable
     private static function escape(\PDO $connection, $value)
     {
         if (!$connection instanceof \PDO) {
-            throw new MOMBaseException(MOMBaseException::MISSING_CONNECTION);
+            throw new BaseException(BaseException::MISSING_CONNECTION);
         }
         return $connection->quote($value);
     }
@@ -731,7 +731,7 @@ abstract class MOMBase implements \Serializable
     /**
       * Get a PDO connection to a database server, either from classname based connections or the global connection
       * If none is found an exception is thrown
-      * @throws MOMBaseException
+      * @throws BaseException
       * @return PDO
       */
     private static function getConnection()
@@ -745,7 +745,7 @@ abstract class MOMBase implements \Serializable
             return self::$__mbConnections[self::GLOBAL_CONNECTION];
         }
 
-        throw new MOMBaseException(MOMBaseException::MISSING_CONNECTION);
+        throw new BaseException(BaseException::MISSING_CONNECTION);
     }
 
     /**
@@ -785,7 +785,7 @@ abstract class MOMBase implements \Serializable
 
     /**
       * Set a memcache handler for the extending class
-      * If called directly on MOMBase, connection is set globally
+      * If called directly on Base, connection is set globally
       * @param \Memcached $memcache
       * @param int $expiration
       * @param bool $global set the memcache globally
@@ -910,11 +910,11 @@ abstract class MOMBase implements \Serializable
     {
         if (static::useStaticCache()) {
             $class = get_called_class();
-            if ($value instanceof MOMBase) {
+            if ($value instanceof Base) {
                 $value->__mbStaticCacheTimestamp = time();
             } elseif (is_array($value)) {
                 foreach ($value as $element) {
-                    if ($element instanceof MOMBase) {
+                    if ($element instanceof Base) {
                         $element->__mbStaticCacheTimestamp = time();
                     }
                 }
@@ -1062,17 +1062,17 @@ abstract class MOMBase implements \Serializable
     }
 
     /**
-      * Checks if the extending class has needed info to use MOMBase
+      * Checks if the extending class has needed info to use Base
       * @param string $classname classname of the extending class
       */
     protected static function checkDbAndTableConstants($classname)
     {
         if (!defined('static::DB') && self::getDbName() === false) {
-            throw new MOMBaseException(MOMBaseException::MISSING_DB_DEFINITION, $classname . ' has no DB defined');
+            throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname . ' has no DB defined');
         }
 
         if (!defined('static::TABLE')) {
-            throw new MOMBaseException(MOMBaseException::MISSING_TABLE_DEFINITION, $classname . ' has no TABLE constant defined');
+            throw new BaseException(BaseException::MISSING_TABLE_DEFINITION, $classname . ' has no TABLE constant defined');
         }
     }
 
@@ -1088,7 +1088,7 @@ abstract class MOMBase implements \Serializable
     private static function getNestedByClass($properties, $class, $iteration = 0)
     {
         if (empty($class)) {
-            throw new MOMBaseException(MOMBaseException::CLASSNAME_IS_EMPTY, 'Trying to get nested property by class, but classname is empty');
+            throw new BaseException(BaseException::CLASSNAME_IS_EMPTY, 'Trying to get nested property by class, but classname is empty');
         }
 
         if (isset($properties[$class])) {
@@ -1102,7 +1102,7 @@ abstract class MOMBase implements \Serializable
         }
 
         if ($iteration > 100) {
-            throw new MOMBaseException(MOMBaseException::RECURSION_LEVEL_TO_DEEP, $class . ' did not match any properties (resulted in infinite loop)');
+            throw new BaseException(BaseException::RECURSION_LEVEL_TO_DEEP, $class . ' did not match any properties (resulted in infinite loop)');
         }
 
         return self::getNestedByClass($properties, $class, ++$iteration);

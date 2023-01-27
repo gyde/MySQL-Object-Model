@@ -1,8 +1,8 @@
 <?php
 
-namespace Gyde\MOM;
+namespace Gyde\Mom;
 
-class MOMException extends \Exception
+class Exception extends \Exception
 {
     private $internalMessage = '';
 

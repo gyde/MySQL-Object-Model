@@ -4,6 +4,6 @@ export MYSQL_HOST="localhost"
 export MYSQL_USERNAME="mom"
 export MYSQL_PASSWD="FaxChopShine"
 
-cd /srv/mom/
+cd /srv/mom/tests
 
-./phpunit-8.4.phar --bootstrap autoload.php --configuration tests/phpunit.xml --colors -v
+./phpunit-8.4.phar --bootstrap autoload.php --configuration phpunit.xml --colors -v

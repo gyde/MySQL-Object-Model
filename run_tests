@@ -1,4 +1,5 @@
 #!/bin/sh
-./build_mom tests\\\\mom tests/mom
+SCRIPTPATH=$(dirname "$(readlink -f "$0")")
+${SCRIPTPATH}/build_mom tests\\\\mom ${SCRIPTPATH}/tests/mom
 
-docker exec -it mom-unit-test /srv/mom/docker/run-mom-unit-test
+sudo docker exec -it mom-unit-test /srv/mom/docker/run-mom-unit-test
