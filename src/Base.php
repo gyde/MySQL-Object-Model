@@ -2,7 +2,7 @@
 
 namespace Gyde\Mom;
 
-abstract class Base implements \Serializable
+abstract class Base
 {
     public const RESERVED_PREFIX = '__mb';
     public const GLOBAL_CONNECTION = '__mbGlobalConnection';
@@ -1110,9 +1110,9 @@ abstract class Base implements \Serializable
 
     /**
       * Serialize object for memcache storage
-      * @return string serialized representation of object
+      * @return array serialized representation of object
       */
-    public function serialize()
+    public function __serialize()
     {
         $class = get_called_class();
         $data = [];
@@ -1124,19 +1124,18 @@ abstract class Base implements \Serializable
         $data['__mbNewObject'] = $this->__mbNewObject;
         $data['__mbSelector'] = $this->__mbSelector;
 
-        return serialize($data);
+        return $data;
     }
 
     /**
       * Unserialize data to recreate object
       * When object is loaded from serialized form default connection and memcache is restored
-      * @param string $data serialized data
+      * @param array $data serialized data
       */
-    public function unserialize($data)
+    public function __unserialize($data)
     {
         $this->__mbConnection = self::getConnection();
         $description = self::describe();
-        $data = unserialize($data);
         foreach ($description as $field) {
             $this->{$field['Field']} = $data[$field['Field']];
         }
