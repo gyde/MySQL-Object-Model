@@ -6,4 +6,4 @@ export MYSQL_PASSWD="FaxChopShine"
 
 cd /srv/mom/tests
 
-./phpunit-8.4.phar --bootstrap autoload.php --configuration phpunit.xml --colors -v
+./phpunit-9.5.28.phar --bootstrap autoload.php --configuration phpunit.xml --colors -v
