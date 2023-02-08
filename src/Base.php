@@ -62,6 +62,12 @@ abstract class Base
     protected $__mbSelector = '';
 
     /**
+      * Stores the original values values of protected fields
+      * @var array<string, mixed>
+      */
+    protected $__mbOriginalValues = array();
+
+    /**
       * Defines database names, this will override usage of constant DB
       * This is mapped by class name and supports nested extending
       * Use method setDbName()
@@ -80,12 +86,13 @@ abstract class Base
       * Static cache with all model descriptions
       * @var array<classname, array<string, string>>
       */
-    protected static $__mbDescriptions = array();
+    private static $__mbDescriptions = array();
 
     /**
       * Values used by mysql as default values for columns
       * When these are picked up from the model description
       * nothing is inserted into the save or update query
+      * unless their values are changed
       * for these fields
       * @var string[]
       */
@@ -95,6 +102,7 @@ abstract class Base
       * Values used by mysql as extra values for columns
       * When these are picked up from the model description
       * nothing is inserted into the save or update query
+      * unless their values are changed
       * for these fields
       * @var string[]
       */
@@ -409,6 +417,9 @@ abstract class Base
     {
         foreach ($row as $key => $value) {
             $this->$key = $value;
+            if (static::isFieldProtected($key)) {
+                $this->__mbOriginalValues[$key] = $value;
+            }
         }
         $this->__mbNewObject = false;
         $this->__mbSelector = static::getSelector($row);
@@ -451,7 +462,7 @@ abstract class Base
       * Entry in memcache will be keyed using classname and CLASS_REVISION
       * @return array<string, string>
       */
-    private static function describe()
+    protected static function describe()
     {
         $class = get_called_class();
         if (array_key_exists($class, self::$__mbDescriptions) && is_array(self::$__mbDescriptions[$class])) {
@@ -513,11 +524,26 @@ abstract class Base
     protected function getFields()
     {
         $fields = [];
-        foreach (self::$__mbDescriptions[get_called_class()] as $field) {
+        foreach (self::describe() as $field) {
             $fields[] = $field['Field'];
         }
 
         return $fields;
+    }
+
+    /**
+      * Returns if a field are considered protected
+      * @param string $field
+      * @return boolean
+      */
+    protected static function isFieldProtected(string $field)
+    {
+        $fields = self::describe();
+        if (!isset($fields[$field])) {
+            return false;
+        }
+        return in_array($fields[$field]['Default'], self::$__mbProtectedValueDefaults) ||
+        in_array($fields[$field]['Extra'], self::$__mbProtectedValueExtras);
     }
 
     /**
@@ -708,7 +734,7 @@ abstract class Base
     {
         $class = get_called_class();
         $str = 'Instance of ' . $class . ':' . "\n";
-        foreach (self::$__mbDescriptions[$class] as $field) {
+        foreach (self::describe() as $field) {
             $str .= $field['Field'] . ': ' . var_export($this->{$field['Field']}, true) . "\n";
         }
 
@@ -1116,13 +1142,14 @@ abstract class Base
     {
         $class = get_called_class();
         $data = [];
-        foreach (self::$__mbDescriptions[$class] as $field) {
+        foreach (self::describe() as $field) {
             $data[$field['Field']] = $this->{$field['Field']};
         }
         $this->__mbSerializeTimestamp = time();
         $data['__mbSerializeTimestamp'] = $this->__mbSerializeTimestamp;
         $data['__mbNewObject'] = $this->__mbNewObject;
         $data['__mbSelector'] = $this->__mbSelector;
+        $data['__mbOriginalValues'] = $this->__mbOriginalValues;
 
         return $data;
     }
@@ -1142,6 +1169,7 @@ abstract class Base
         $this->__mbSerializeTimestamp = $data['__mbSerializeTimestamp'];
         $this->__mbNewObject = $data['__mbNewObject'];
         $this->__mbSelector = $data['__mbSelector'];
+        $this->__mbOriginalValues = $data['__mbOriginalValues'];
         $this->__mbMemcache = self::getMemcache();
     }
 }

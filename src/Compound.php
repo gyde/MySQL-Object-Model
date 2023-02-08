@@ -133,14 +133,18 @@ class Compound extends Base
     {
         $values = [];
         $compoundKeys = self::getCompoundKeys();
-        foreach (static::$__mbDescriptions[get_called_class()] as $field) {
-            if (
-                !in_array($field['Field'], $compoundKeys) &&
-                !in_array($field['Default'], self::$__mbProtectedValueDefaults) &&
-                !in_array($field['Extra'], self::$__mbProtectedValueExtras)
-            ) {
-                $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
+        foreach (static::describe() as $field) {
+            $name = $field['Field'];
+
+            if (!isset($this->$name) || in_array($name, $compoundKeys)) {
+                continue;
             }
+
+            if (static::isFieldProtected($field['Field']) && isset($this->__mbOriginalValues[$name]) && $this->$name === $this->__mbOriginalValues[$name]) {
+                continue;
+            }
+
+            $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
         }
 
         return $values;
@@ -194,7 +198,7 @@ class Compound extends Base
     private function getKeyPairs()
     {
         $wheres = [];
-        $description = static::$__mbDescriptions[get_called_class()];
+        $description = static::describe();
         foreach (self::getCompoundKeys() as $key) {
             if (!isset($this->$key)) {
                 throw new BaseException(BaseException::COMPOUND_KEY_MISSING_VALUE, get_called_class() . '->' . __FUNCTION__ . ' failed to save object to database, ' . $key . ' is not set on object');
