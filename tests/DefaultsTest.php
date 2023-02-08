@@ -14,7 +14,7 @@ class DefaultTest extends \PHPUnit\Framework\TestCase
 	{
 		try {
 			self::$connection = Util::getConnection();
-			\tests\mom\Base::setConnection(self::$connection, TRUE);
+			\Gyde\Mom\Base::setConnection(self::$connection, TRUE);
 			self::createTable(DefaultActual::DB, DefaultActual::TABLE);
 		} catch (\PDOException $e) {
 			self::$skipTests = TRUE;
@@ -22,7 +22,7 @@ class DefaultTest extends \PHPUnit\Framework\TestCase
 		}
 
 		self::$memcache = Util::getMemcache();
-		\tests\mom\Base::setMemcache(self::$memcache, 300);
+		\Gyde\Mom\Base::setMemcache(self::$memcache, 300);
 	}
 
 	private static function createTable($dbName, $tableName)

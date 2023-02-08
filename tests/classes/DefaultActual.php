@@ -1,7 +1,7 @@
 <?php
 namespace tests\classes;
 
-class DefaultActual extends \tests\mom\Simple
+class DefaultActual extends \Gyde\Mom\Simple
 {
 	const DB = 'mom';
 	const TABLE = 'mom_default_test';

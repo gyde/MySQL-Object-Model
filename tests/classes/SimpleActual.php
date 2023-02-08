@@ -1,5 +1,5 @@
 <?php
-namespace tests\classes; class SimpleActual extends \tests\mom\Simple
+namespace tests\classes; class SimpleActual extends \Gyde\Mom\Simple
 {
 	const DB = 'mom';
 	const TABLE = 'mom_simple_test';

@@ -15,7 +15,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 		try
 		{
 			self::$connection = Util::getConnection();
-			\tests\mom\Base::setConnection(self::$connection, TRUE);
+			\Gyde\Mom\Base::setConnection(self::$connection, TRUE);
 			$sqls[] = 'DROP TABLE IF EXISTS '.CompoundActual::DB.'.'.CompoundActual::TABLE.';';
 			$sqls[] = 'CREATE TABLE '.CompoundActual::DB.'.'.CompoundActual::TABLE.' ('.
 				' `'.CompoundActual::COLUMN_KEY1.'` INT(10) UNSIGNED NOT NULL'.
@@ -39,7 +39,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 		}
 
 		self::$memcache = Util::getMemcache();
-		\tests\mom\Base::setMemcache(self::$memcache, 300);
+		\Gyde\Mom\Base::setMemcache(self::$memcache, 300);
 	}
 
 	public static function tearDownAfterClass(): void
