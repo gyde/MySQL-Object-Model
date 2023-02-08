@@ -172,26 +172,25 @@ class Simple extends Base
         $class = get_called_class();
         $primaryKey = static::COLUMN_PRIMARY_KEY;
         $autoIncrement = false;
-        foreach (static::$__mbDescriptions[$class] as $field) {
-            //Ensures that the primay key and mysql protected value defaults are not in values array
-            if (
-                $field['Field'] !== $primaryKey &&
-                !in_array($field['Default'], self::$__mbProtectedValueDefaults) &&
-                !in_array($field['Extra'], self::$__mbProtectedValueExtras)
-            ) {
-                $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
+        foreach (static::describe() as $field) {
+            $name = $field['Field'];
+
+            if (!isset($this->$name)) {
+                continue;
             }
 
-            if ($field['Key'] == 'PRI' && $field['Extra'] == 'auto_increment') {
-                $autoIncrement = true;
+            if ($name === $primaryKey && (!$this->isNew() || $field['Extra'] == 'auto_increment')) {
+                continue;
             }
+
+            if (static::isFieldProtected($field['Field']) && isset($this->__mbOriginalValues[$name]) && $this->$name === $this->__mbOriginalValues[$name]) {
+                continue;
+            }
+
+            $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
         }
 
         if ($this->isNew()) {
-            if (!$autoIncrement) {
-                $values[] = ' `' . static::COLUMN_PRIMARY_KEY . '` = ' . $this->escapeObject($this->$primaryKey);
-            }
-
             $sql =
                 'INSERT INTO `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values);
