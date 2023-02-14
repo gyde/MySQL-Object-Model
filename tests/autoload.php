@@ -1,36 +1,13 @@
 <?php
 
-namespace tests;
+require_once __DIR__ . '/../autoload.php';
 
 spl_autoload_register(function ($className) {
-    static $includeSegments = null;
-    if ($includeSegments === null) {
-        $includeSegments = explode(PATH_SEPARATOR, __DIR__);
-    }
-
-    $nLength = strlen(__NAMESPACE__);
-    if (substr($className, 0, $nLength + 1) != __NAMESPACE__ . '\\') {
+    if (substr($className, 0, 6) != 'tests\\') {
         return;
     }
-    $message = 'Classname: ' . $className . "\n";
-
-    print_r(PATH_SEPARATOR);
-
-    $basename = str_replace('\\', '/', substr($className, $nLength + 1)) . '.php';
-    foreach ($includeSegments as $includeSegment) {
-
-        print $includeSegment . "\n";
-        $filename = $includeSegment . '/' . $basename;
-        $message .= 'filename: ' . $filename;
-
-        if (file_exists($filename)) {
-            require_once($filename);
-            print($message . " included\n");
-            return;
-        }
-
-        $message .= "\n";
+    $path = __DIR__ . str_replace('\\', '/', substr($className, 5)) . '.php';
+    if (is_file($path)) {
+        require_once $path;
     }
-
-    print($message."Not found\n\n");
 });

@@ -25,6 +25,6 @@
         }
     },
     "archive": {
-        "exclude": ["/docker", "/tests", "/build_mom", "/run_tests"]
+        "exclude": ["/docker", "/tests", "/build_mom", "/run_tests", "/autoload.php"]
     }
 }

@@ -16,7 +16,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 		try
 		{
 			self::$connection = Util::getConnection();
-			\tests\mom\Base::setConnection(self::$connection, TRUE);
+			\Gyde\Mom\Base::setConnection(self::$connection, TRUE);
 			self::createTable(SimpleActual::DB, SimpleActual::TABLE);
 			self::createTable(SimpleActual2::DB.'2', SimpleActual2::TABLE); }
 		catch (\PDOException $e)
@@ -26,7 +26,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 		}
 
 		self::$memcache = Util::getMemcache();
-		\tests\mom\Base::setMemcache(self::$memcache, 300);
+		\Gyde\Mom\Base::setMemcache(self::$memcache, 300);
 	}
 
 	private static function createTable($dbName, $tableName)
@@ -119,8 +119,8 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 			$object2->state = 'SET';
 			$object2->unique = $object1->unique;
 			$object2->save();
-		} catch (\tests\mom\BaseException $e) {
-			$this->assertEquals($e->getCode(), \tests\mom\BaseException::OBJECT_DUPLICATED_ENTRY);
+		} catch (\Gyde\Mom\BaseException $e) {
+			$this->assertEquals($e->getCode(), \Gyde\Mom\BaseException::OBJECT_DUPLICATED_ENTRY);
 		}
 	}
 
