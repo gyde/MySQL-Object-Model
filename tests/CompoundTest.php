@@ -9,6 +9,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 	static $memcache = NULL;
 	static $skipTests = FALSE;
 	static $skipTestsMessage = '';
+	private static $autoIncrement = 1;
 
 	public static function setUpBeforeClass(): void
 	{
@@ -22,6 +23,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 				', `'.CompoundActual::COLUMN_KEY2.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.CompoundActual::COLUMN_KEY3.'` INT(10) UNSIGNED NOT NULL'.
 				', `'.CompoundActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
+				', `'.CompoundActual::COLUMN_CREATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 				', `'.CompoundActual::COLUMN_UPDATED.'` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
 				', `'.CompoundActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 				', PRIMARY KEY (`'.CompoundActual::COLUMN_KEY1.'`,`'.CompoundActual::COLUMN_KEY2.'`,`'.CompoundActual::COLUMN_KEY3.'`)'.
@@ -62,17 +64,27 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 		}
 	}
 
+	private function uniqueKeys(): array
+	{
+		return [
+			CompoundActual::COLUMN_KEY1 => self::$autoIncrement++,
+			CompoundActual::COLUMN_KEY2 => self::$autoIncrement++,
+			CompoundActual::COLUMN_KEY3 => self::$autoIncrement++
+		];
+	}
+
 	public function testSave()
 	{
+		$ids = $this->uniqueKeys();
+
 		$object1 = new CompoundActual(self::$connection);
-		$object1->key1 = 1;
-		$object1->key2 = 1;
-		$object1->key3 = 1;
+		foreach ($ids as $key => $value) {
+			$object1->$key = $value;
+		}
 		$object1->unique = uniqid();
 		$object1->save();
 		$this->assertEquals($object1->state, 'READY');
 
-		$ids = array('key1' => $object1->key1, 'key2' => $object1->key2, 'key3' => $object1->key3);
 		$object2 = CompoundActual::getByIds($ids);
 		$this->assertEquals($object1->key1, $object2->key1);
 		$this->assertEquals($object1->key2, $object2->key2);
@@ -80,9 +92,9 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 		$this->assertEquals($object1->unique, $object2->unique);
 
 		$object3 = new CompoundActual(self::$connection);
-		$object3->key1 = 1;
-		$object3->key2 = 2;
-		$object3->key3 = 1;
+		$object3->key1 = $object1->key1;
+		$object3->key2 = self::$autoIncrement++;
+		$object3->key3 = $object1->key3;
 		$object3->state = 'SET';
 		$object3->unique = uniqid();
 		$object3->save();
@@ -95,23 +107,26 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 
 	public function testDelete()
 	{
-		$ids = array('key1' => 1, 'key2' => 1, 'key3' => 1);
-		$object = CompoundActual::getByIds($ids);
-		$this->assertNotNull($object);
-		$object->delete();
+		$ids = $this->uniqueKeys();
+		$object1 = new CompoundActual(self::$connection);
+		foreach ($ids as $key => $value) {
+			$object1->$key = $value;
+		}
+		$object1->unique = uniqid();
+		$object1->save();
 
-		$object = CompoundActual::getByIds($ids);
+		$object2 = CompoundActual::getByIds($ids);
+		$this->assertNotNull($object2);
+		$object2->delete();
 
-		$this->assertNull($object, 'Object should not be in database');
+		$object2 = CompoundActual::getByIds($ids);
+
+		$this->assertNull($object2, 'Object should not be in database');
 	}
 
 	public function testStaticCacheSingleton()
 	{
-		$ids = array(
-			CompoundActual::COLUMN_KEY1 => 4,
-			CompoundActual::COLUMN_KEY2 => 5,
-			CompoundActual::COLUMN_KEY3 => 6
-		);
+		$ids = $this->uniqueKeys();
 		$where = array();
 
 		$object1 = new CompoundActual(self::$connection);
@@ -139,5 +154,59 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 		// Meaning that if this test passes singletons should be ensured.
 		$object5 = CompoundActual::getOne($where);
 		$this->assertSame($object4, $object5);
+	}
+
+	public function testProtectedFields()
+	{
+		$object = new CompoundActual();
+		foreach ($this->uniqueKeys() as $key => $value) {
+			$object->$key = $value;
+		}
+		$created1 = $object->created;
+		$updated1 = $object->updated;
+
+		$object->save();
+		$created2 = $object->created;
+		$updated2 = $object->updated;
+
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $created2), 'Not valid datetime string');
+		$this->assertNotEquals($created1, $created2);
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $updated2), 'Not valid datetime string');
+		$this->assertNotEquals($updated1, $updated2);
+
+		sleep(1);
+		$object->unique = uniqid();
+		$object->save();
+		$created3 = $object->created;
+		$updated3 = $object->updated;
+
+		$this->assertEquals($created2, $created3);
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $updated3), 'Not valid datetime string');
+		$this->assertGreaterThan($updated2, $updated3);
+	}
+
+	public function testProtectedFieldsOverwrite()
+	{
+		$newDate = '2000-01-01 13:37:00';
+
+		$object = new CompoundActual();
+		foreach ($this->uniqueKeys() as $key => $value) {
+			$object->$key = $value;
+		}
+		$object->created = $newDate;
+		$object->updated = $newDate;
+		$object->save();
+
+		$this->assertEquals($newDate, $object->created);
+		$this->assertEquals($newDate, $object->updated);
+
+		$newDate = '2000-01-02 13:37:00';
+
+		$object->created = $newDate;
+		$object->updated = $newDate;
+		$object->save();
+
+		$this->assertEquals($newDate, $object->created);
+		$this->assertEquals($newDate, $object->updated);
 	}
 }
