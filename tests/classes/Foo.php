@@ -1,9 +1,10 @@
 <?php
+
 namespace tests\classes;
 
 class Foo extends FooBar
 {
-	const TABLE = 'foo';
+    public const TABLE = 'foo';
 
-	const COLUMN_PRIMARY_KEY = 'foo_id';
+    public const COLUMN_PRIMARY_KEY = 'foo_id';
 }
