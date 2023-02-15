@@ -1,20 +1,21 @@
 <?php
+
 namespace tests\classes;
 
 class DefaultActual extends \Gyde\Mom\Simple
 {
-	const DB = 'mom';
-	const TABLE = 'mom_default_test';
+    public const DB = 'mom';
+    public const TABLE = 'mom_default_test';
 
-	const USE_STATIC_CACHE = TRUE;
-	const USE_MEMCACHE = TRUE;
+    public const USE_STATIC_CACHE = true;
+    public const USE_MEMCACHE = true;
 
-	const COLUMN_PRIMARY_KEY = 'primary_key';
-	const COLUMN_DEFAULT_VALUE = 'state';
-	const COLUMN_UPDATED = 'updated';
-	const COLUMN_UNIQUE = 'unique';
+    public const COLUMN_PRIMARY_KEY = 'primary_key';
+    public const COLUMN_DEFAULT_VALUE = 'state';
+    public const COLUMN_UPDATED = 'updated';
+    public const COLUMN_UNIQUE = 'unique';
 
-	const STATE_READY = 'READY';
-	const STATE_SET = 'SET';
-	const STATE_GO = 'GO';
+    public const STATE_READY = 'READY';
+    public const STATE_SET = 'SET';
+    public const STATE_GO = 'GO';
 }
