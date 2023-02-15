@@ -13,6 +13,7 @@ class CompoundActual extends \Gyde\Mom\Compound
 	const COLUMN_KEY2 = 'key2';
 	const COLUMN_KEY3 = 'key3';
 	const COLUMN_DEFAULT_VALUE = 'state';
+	const COLUMN_CREATED = 'created';
 	const COLUMN_UPDATED = 'updated';
 	const COLUMN_UNIQUE = 'unique';
 

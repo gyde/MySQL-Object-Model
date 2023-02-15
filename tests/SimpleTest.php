@@ -36,6 +36,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 			' `'.SimpleActual::COLUMN_PRIMARY_KEY.'` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY'.
 			', `'.SimpleActual::COLUMN_DEFAULT_VALUE.'` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\''.
 			', `'.SimpleActual::COLUMN_CREATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'.
+			', `'.SimpleActual::COLUMN_UPDATED.'` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'.
 			', `'.SimpleActual::COLUMN_IS_IT_ON.'` BOOLEAN DEFAULT 0'.
 			', `'.SimpleActual::COLUMN_UNIQUE.'` VARCHAR(32) CHARACTER SET ascii UNIQUE'.
 			') ENGINE = MYISAM';
@@ -299,5 +300,53 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 		$objects = SimpleActual::getAll(null, false, null, null, false);
 
 		$this->assertEquals(count($objects), 3);
+	}
+
+	public function testProtectedFields()
+	{
+		$object = new SimpleActual();
+		$created1 = $object->created;
+		$updated1 = $object->updated;
+
+		$object->save();
+		$created2 = $object->created;
+		$updated2 = $object->updated;
+
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $created2), 'Not valid datetime string');
+		$this->assertNotEquals($created1, $created2);
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $updated2), 'Not valid datetime string');
+		$this->assertNotEquals($updated1, $updated2);
+
+		sleep(1);
+		$object->unique = uniqid();
+		$object->save();
+		$created3 = $object->created;
+		$updated3 = $object->updated;
+
+		$this->assertEquals($created2, $created3);
+		$this->assertSame(1, preg_match(Util::DATETIME_REGEX, $updated3), 'Not valid datetime string');
+		$this->assertGreaterThan($updated2, $updated3);
+	}
+
+	public function testProtectedFieldsOverwrite()
+	{
+		$newDate = '2000-01-01 13:37:00';
+
+		$object = new SimpleActual();
+		$object->created = $newDate;
+		$object->updated = $newDate;
+		$object->save();
+
+		$this->assertEquals($newDate, $object->created);
+		$this->assertEquals($newDate, $object->updated);
+
+		$newDate = '2000-01-02 13:37:00';
+
+		$object->created = $newDate;
+		$object->updated = $newDate;
+		$object->save();
+
+		$this->assertEquals($newDate, $object->created);
+		$this->assertEquals($newDate, $object->updated);
 	}
 }
