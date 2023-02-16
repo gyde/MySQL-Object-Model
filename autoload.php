@@ -1,29 +1,11 @@
 <?php
 
-namespace Gyde\MOM;
-
 spl_autoload_register(function ($className) {
-    static $includeSegments = null;
-
-    if ($includeSegments === null) {
-        $includeSegments = explode(PATH_SEPARATOR, __DIR__);
+    if (substr($className, 0, 9) != 'Gyde\\Mom\\') {
+        return;
     }
-
-    $message = 'Classname: ' . $className . "\n";
-
-    $basename = str_replace('\\', '/', $className) . '.php';
-    foreach ($includeSegments as $includeSegment) {
-        $filename = $includeSegment . '/' . $basename;
-        $message .= 'filename: ' . $filename;
-
-        if (file_exists($filename)) {
-            $message .= ' included';
-            require_once($filename);
-            break;
-        }
-
-        $message .= "\n";
+    $path = __DIR__ . '/src/' . str_replace('\\', '/', substr($className, 9)) . '.php';
+    if (is_file($path)) {
+        require_once $path;
     }
-
-    print($message."\n");
 });

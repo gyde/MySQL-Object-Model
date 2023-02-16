@@ -1,6 +1,7 @@
 <?php
+
 namespace tests\classes;
 
-class FooBar extends \tests\mom\MOMSimple
+class FooBar extends \Gyde\Mom\Simple
 {
 }

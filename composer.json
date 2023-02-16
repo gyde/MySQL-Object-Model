@@ -1,0 +1,30 @@
+{
+    "name": "gyde/mysql-object-model",
+    "type": "library",
+    "description": "PHP ORM",
+    "keywords": ["orm", "database"],
+    "homepage": "https://github.com/gyde/MySQL-Object-Model",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Martin Gyde Poulsen",
+            "email": "gyde@nqrd.dk",
+            "role": "Developer"
+        },
+        {
+            "name": "Oinkling",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.4.0 || ^8.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gyde\\Mom\\": "src"
+        }
+    },
+    "archive": {
+        "exclude": ["/docker", "/tests", "/build_mom", "/run_tests", "/autoload.php"]
+    }
+}
