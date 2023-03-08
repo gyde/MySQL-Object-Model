@@ -175,7 +175,7 @@ class Simple extends Base
         foreach (static::describe() as $field) {
             $name = $field['Field'];
 
-            if (!isset($this->$name)) {
+            if (!property_exists($this, $name)) {
                 continue;
             }
 
