@@ -58,7 +58,9 @@ class Compound extends Base
     {
         $sql = static::buildSaveSql();
 
-        $this->tryToSave($sql);
+        if ($sql !== null) {
+            $this->tryToSave($sql);
+        }
 
         $ids = array();
         foreach (self::getCompoundKeys() as $key) {
@@ -100,7 +102,7 @@ class Compound extends Base
 
     /**
       * Build sql statement for saving a compound object
-      * @return string
+      * @return ?string
       */
     protected function buildSaveSql()
     {
@@ -110,17 +112,17 @@ class Compound extends Base
         if ($this->isNew()) {
             $values = array_merge($keys, $values);
 
-            $sql =
+            return
                 'INSERT INTO `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values);
-        } else {
-            $sql =
+        } elseif (count($values) > 0) {
+            return
                 'UPDATE `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values) .
                 ' WHERE ' . join(' AND ', $keys);
         }
 
-        return $sql;
+        return null;
     }
 
     /**
@@ -136,7 +138,11 @@ class Compound extends Base
         foreach (static::describe() as $field) {
             $name = $field['Field'];
 
-            if (!isset($this->$name) || in_array($name, $compoundKeys)) {
+            if (!property_exists($this, $name) || in_array($name, $compoundKeys)) {
+                continue;
+            }
+
+            if ($this->$name === null && $field['Null'] == 'NO') {
                 continue;
             }
 

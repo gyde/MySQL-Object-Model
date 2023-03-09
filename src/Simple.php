@@ -116,7 +116,9 @@ class Simple extends Base
     {
         $sql = static::buildSaveSql();
 
-        $this->tryToSave($sql);
+        if ($sql !== null) {
+            $this->tryToSave($sql);
+        }
 
         $keyname = static::COLUMN_PRIMARY_KEY;
         if ($this->isNew() && $this->__mbConnection->lastInsertId() != 0) {
@@ -164,18 +166,22 @@ class Simple extends Base
 
     /**
       * Build save sql using extending class description
-      * @return string
+      * @return ?string
       */
     protected function buildSaveSql()
     {
         $values = array();
         $class = get_called_class();
         $primaryKey = static::COLUMN_PRIMARY_KEY;
-        $autoIncrement = false;
+
         foreach (static::describe() as $field) {
             $name = $field['Field'];
 
             if (!property_exists($this, $name)) {
+                continue;
+            }
+
+            if ($this->$name === null && $field['Null'] == 'NO') {
                 continue;
             }
 
@@ -191,17 +197,17 @@ class Simple extends Base
         }
 
         if ($this->isNew()) {
-            $sql =
+            return
                 'INSERT INTO `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values);
-        } else {
-            $sql =
+        } elseif (count($values) > 0) {
+            return
                 'UPDATE `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values) .
                 ' WHERE `' . static::COLUMN_PRIMARY_KEY . '` = ' . $this->escapeObject($this->$primaryKey);
         }
 
-        return $sql;
+        return null;
     }
 
     /**
