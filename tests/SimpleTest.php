@@ -33,7 +33,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
         $sqls[] = 'DROP TABLE IF EXISTS `' . $dbName . '`.`' . $tableName . '`';
         $sqls[] = 'CREATE TABLE `' . $dbName . '`.`' . $tableName . '` (' .
             ' `' . SimpleActual::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY' .
-            ', `' . SimpleActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\'' .
+            ', `' . SimpleActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
             ', `' . SimpleActual::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
             ', `' . SimpleActual::COLUMN_UPDATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP' .
             ', `' . SimpleActual::COLUMN_IS_IT_ON . '` BOOLEAN DEFAULT 0' .

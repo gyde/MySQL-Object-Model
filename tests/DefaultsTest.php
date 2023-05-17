@@ -31,7 +31,7 @@ class DefaultTest extends \PHPUnit\Framework\TestCase
         $sqls[] = 'DROP TABLE IF EXISTS `' . $dbName . '`.`' . $tableName . '`;';
         $sqls[] = 'CREATE TABLE `' . $dbName . '`.`' . $tableName . '` (' .
             ' `' . DefaultActual::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY' .
-            ', `' . DefaultActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\'' .
+            ', `' . DefaultActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
             ', `' . DefaultActual::COLUMN_UPDATED . '` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT \'0000-00-00 00:00:00\'' .
             ', `' . DefaultActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
             ') ENGINE = MYISAM;';

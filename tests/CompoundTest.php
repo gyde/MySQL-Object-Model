@@ -22,7 +22,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
                 ' `' . CompoundActual::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL' .
                 ', `' . CompoundActual::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL' .
                 ', `' . CompoundActual::COLUMN_KEY3 . '` INT(10) UNSIGNED NOT NULL' .
-                ', `' . CompoundActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\') NOT NULL DEFAULT \'READY\'' .
+                ', `' . CompoundActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
                 ', `' . CompoundActual::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
                 ', `' . CompoundActual::COLUMN_UPDATED . '` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
                 ', `' . CompoundActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
