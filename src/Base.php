@@ -699,7 +699,8 @@ abstract class Base
             return '`' . $field . '` = null';
         }
 
-        if (strpos($type, 'int') !== false) {
+        $puretype = explode('(', $type, 2)[0];
+        if (strpos($puretype, 'int') !== false) {
             return '`' . $field . '` = ' . (int)$this->$field;
         }
 
