@@ -460,6 +460,7 @@ abstract class Base
       * Caches model in static cache and in Memcache(if enabled)
       * Used when creating new objects, for default values and field info
       * Entry in memcache will be keyed using classname and CLASS_REVISION
+      * @throws BaseException
       * @return array<string, string>
       */
     protected static function describe()

@@ -67,7 +67,7 @@ class Compound extends Base
             $ids[$key] = $this->$key;
         }
 
-        if (($row = self::getRowByIds($ids)) === null) {
+        if (($row = self::getRowByIds($ids)) == false) {
             throw new BaseException(BaseException::OBJECT_NOT_UPDATED, get_called_class() . '->' . __FUNCTION__ . ' failed to update object with data from database');
         }
 
@@ -169,7 +169,7 @@ class Compound extends Base
       * Get mysql row by primary key
       * @param mixed $id escaped
       * @throws MySQLException
-      * @return resource(mysql resource) or null on failure
+      * @return resource(mysql resource) or false on failure
       */
     private function getRowByIds($ids)
     {
@@ -184,7 +184,7 @@ class Compound extends Base
       * Get mysql row by primary key
       * @param mixed $id escaped
       * @throws MySQLException
-      * @return resource(mysql resource) or null on failure
+      * @return resource(mysql resource) or false on failure
       */
     private static function getRowByIdsStatic($ids)
     {
@@ -199,6 +199,7 @@ class Compound extends Base
       * Get object key pairs
       * Returns mysql field and value string
       * Several rows of pairs like these: `field` = 'value'
+      * @throws BaseException
       * @return string[]
       */
     private function getKeyPairs()
@@ -206,6 +207,9 @@ class Compound extends Base
         $wheres = [];
         $description = static::describe();
         foreach (self::getCompoundKeys() as $key) {
+            if ($description[$key]['Extra'] == 'auto_increment') {
+                throw new BaseException(BaseException::COMPOUND_KEY_AUTO_INCREMENT, get_called_class() . ' uses a table with a compound key, where one of the fields is set to auto increment, please use Simple instead.');
+            }
             if (!isset($this->$key)) {
                 throw new BaseException(BaseException::COMPOUND_KEY_MISSING_VALUE, get_called_class() . '->' . __FUNCTION__ . ' failed to save object to database, ' . $key . ' is not set on object');
             }
