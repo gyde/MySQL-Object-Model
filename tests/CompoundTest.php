@@ -3,6 +3,8 @@
 namespace tests;
 
 use tests\classes\CompoundActual;
+use tests\classes\CompoundAutoIncrement;
+use Gyde\Mom\BaseException;
 
 class CompoundTest extends \PHPUnit\Framework\TestCase
 {
@@ -18,6 +20,7 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
             self::$connection = Util::getConnection();
             \Gyde\Mom\Base::setConnection(self::$connection, true);
             $sqls[] = 'DROP TABLE IF EXISTS ' . CompoundActual::DB . '.' . CompoundActual::TABLE . ';';
+            $sqls[] = 'DROP TABLE IF EXISTS ' . CompoundAutoIncrement::DB . '.' . CompoundAutoIncrement::TABLE . ';';
             $sqls[] = 'CREATE TABLE ' . CompoundActual::DB . '.' . CompoundActual::TABLE . ' (' .
                 ' `' . CompoundActual::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL' .
                 ', `' . CompoundActual::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL' .
@@ -28,6 +31,12 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
                 ', `' . CompoundActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
                 ', PRIMARY KEY (`' . CompoundActual::COLUMN_KEY1 . '`,`' . CompoundActual::COLUMN_KEY2 . '`,`' . CompoundActual::COLUMN_KEY3 . '`)' .
                 ') ENGINE = MYISAM;';
+            $sqls[] = 'CREATE TABLE ' . CompoundAutoIncrement::DB . '.' . CompoundAutoIncrement::TABLE . ' (' .
+            ' `' . CompoundAutoIncrement::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT' .
+            ', `' . CompoundAutoIncrement::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL' .
+            ', `' . CompoundAutoIncrement::COLUMN_KEY3 . '` INT(10) UNSIGNED NOT NULL' .
+            ', PRIMARY KEY (`' . CompoundAutoIncrement::COLUMN_KEY1 . '`,`' . CompoundAutoIncrement::COLUMN_KEY2 . '`,`' . CompoundAutoIncrement::COLUMN_KEY3 . '`)' .
+            ') ENGINE = MYISAM;';
 
             foreach ($sqls as $sql) {
                 $res = self::$connection->exec($sql);
@@ -202,5 +211,16 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 
         $this->assertEquals($newDate, $object->created);
         $this->assertEquals($newDate, $object->updated);
+    }
+
+    public function testSaveAutoIncrement()
+    {
+        $this->expectException(BaseException::class);
+        $this->expectExceptionCode(12);
+        $object1 = new CompoundAutoIncrement(self::$connection);
+        $object1->key1 = 42;
+        $object1->key2 = 'test';
+        $object1->key3 = '';
+        $object1->save();
     }
 }

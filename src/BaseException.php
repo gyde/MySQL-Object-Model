@@ -43,6 +43,9 @@ class BaseException extends Exception
     public const GET_SELECTOR_NOT_DEFINED = 11;
     public const MESSAGE_11 = 'A static getSelector() method must be defined in classes extending Base';
 
+    public const COMPOUND_KEY_AUTO_INCREMENT = 12;
+    public const MESSAGE_12 = 'MOM does not support tables with compound keys that use auto increment';
+
     public const OBJECT_NOT_SAVED = 100;
     public const MESSAGE_100 = 'Object could not be saved (created/updated)';
 
