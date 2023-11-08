@@ -2,6 +2,7 @@
 
 namespace Gyde\Mom;
 
+#[\AllowDynamicProperties]
 abstract class Base
 {
     public const RESERVED_PREFIX = '__mb';
