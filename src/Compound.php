@@ -188,7 +188,7 @@ class Compound extends Base
       */
     private static function getRowByIdsStatic($ids)
     {
-        $sql = self::buildCompoundSql($ids, [self::class, 'escapeStatic']);
+        $sql = self::buildCompoundSql($ids, [static::class, 'escapeStatic']);
 
         $res = self::queryStatic($sql);
 
