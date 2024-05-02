@@ -27,4 +27,31 @@ class Util
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         return $pdo;
     }
+
+    /**
+     * Sometimes the tests requires a class to be made un-instanciable
+     * In those cases we need another way to "unDescribe" them
+     */
+    public static function unDescribe(string $class)
+    {
+        if ($class::USE_MEMCACHE) {
+            $getMemcacheKeyRef = new \ReflectionMethod($class . '::getMemcacheKey');
+            $memcacheKey = $getMemcacheKeyRef->invoke(null, '__mbDescription');
+
+            $getMemcacheRef = new \ReflectionMethod($class . '::getMemcache');
+            $memcache = $getMemcacheRef->invoke(null);
+
+            $memcache['memcache']->delete($memcacheKey);
+        }
+
+        $descriptionsRef = new \ReflectionProperty(\Gyde\Mom\Base::class, '__mbDescriptions');
+        $descriptions = $descriptionsRef->getValue();
+        $descriptions[$class] = null;
+        $descriptionsRef->setValue(null, $descriptions);
+
+        $keyValidatedRef = new \ReflectionProperty(\Gyde\Mom\Base::class, '__mbKeyValidated');
+        $validationList = $descriptionsRef->getValue();
+        $validationList[$class] = false;
+        $keyValidatedRef->setValue(null, $validationList);
+    }
 }
