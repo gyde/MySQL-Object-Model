@@ -90,6 +90,12 @@ abstract class Base
     private static $__mbDescriptions = array();
 
     /**
+      * Keeps track of if the key has been validated
+      * @var array<classname, bool>
+      */
+    protected static array $__mbKeyValidated = array();
+
+    /**
       * Values used by mysql as default values for columns
       * When these are picked up from the model description
       * nothing is inserted into the save or update query
@@ -464,7 +470,7 @@ abstract class Base
       * @throws BaseException
       * @return array<string, string>
       */
-    protected static function describe()
+    public static function describe()
     {
         $class = get_called_class();
         if (array_key_exists($class, static::$__mbDescriptions) && is_array(static::$__mbDescriptions[$class])) {
@@ -517,6 +523,7 @@ abstract class Base
             error_log('Deleting static description for class: ' . $class);
         }
         static::$__mbDescriptions[$class] = null;
+        self::$__mbKeyValidated[$class] = false;
     }
 
     /**
