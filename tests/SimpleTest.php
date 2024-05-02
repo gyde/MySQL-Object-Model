@@ -2,8 +2,7 @@
 
 namespace tests;
 
-use tests\classes\SimpleActual;
-use tests\classes\SimpleActual2;
+use tests\classes\{SimpleActual, SimpleActual2};
 
 class SimpleTest extends \PHPUnit\Framework\TestCase
 {
@@ -11,14 +10,15 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
     private static $memcache = null;
     private static $skipTests = false;
     private static $skipTestsMessage = '';
+    private static $createdTables = [];
 
     public static function setUpBeforeClass(): void
     {
         try {
             self::$connection = Util::getConnection();
             \Gyde\Mom\Base::setConnection(self::$connection, true);
-            self::createTable(SimpleActual::DB, SimpleActual::TABLE);
-            self::createTable(SimpleActual2::DB . '2', SimpleActual2::TABLE);
+            self::createTable(SimpleActual::class);
+            self::createTable(SimpleActual2::class);
         } catch (\PDOException $e) {
             self::$skipTests = true;
             self::$skipTestsMessage = $e->getMessage();
@@ -28,32 +28,39 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
         \Gyde\Mom\Base::setMemcache(self::$memcache, 300);
     }
 
-    private static function createTable($dbName, $tableName)
+    private static function getTableName(string $class)
     {
-        $sqls[] = 'DROP TABLE IF EXISTS `' . $dbName . '`.`' . $tableName . '`';
-        $sqls[] = 'CREATE TABLE `' . $dbName . '`.`' . $tableName . '` (' .
-            ' `' . SimpleActual::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY' .
-            ', `' . SimpleActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
-            ', `' . SimpleActual::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
-            ', `' . SimpleActual::COLUMN_UPDATED . '` TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP' .
-            ', `' . SimpleActual::COLUMN_IS_IT_ON . '` BOOLEAN DEFAULT 0' .
-            ', `' . SimpleActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
-            ') ENGINE = MYISAM';
+        return '`' . $class::DB . '`.`' . $class::TABLE . '`';
+    }
 
-        foreach ($sqls as $sql) {
-            $res = self::$connection->exec($sql);
+    private static function createTable(string $class)
+    {
+        $table = static::getTableName($class);
+
+        self::$connection->exec('
+            DROP TABLE IF EXISTS ' . $table . ';
+            CREATE TABLE ' . $table . ' (
+                  `' . $class::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
+                , `' . $class::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'
+                , `' . $class::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                , `' . $class::COLUMN_UPDATED . '` TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                , `' . $class::COLUMN_IS_IT_ON . '` BOOLEAN DEFAULT 0
+                , `' . $class::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE
+            ) ENGINE = MYISAM
+        ');
+
+        if (!in_array($table, self::$createdTables)) {
+            self::$createdTables[] = $table;
         }
     }
 
     public static function tearDownAfterClass(): void
     {
         self::$connection = Util::getConnection();
-        $sqls[] = 'DROP TABLE `' . SimpleActual::DB . '`.`' . SimpleActual::TABLE . '`';
-        $sqls[] = 'DROP TABLE `' . SimpleActual::DB . '2`.`' . SimpleActual2::TABLE . '`';
 
-        foreach ($sqls as $sql) {
-            self::$connection->query($sql);
-        }
+        $sqls = array_map(fn($table) => 'DROP TABLE ' . $table . ';', self::$createdTables);
+        self::$connection->query(join("\n", $sqls));
+
         self::$memcache = Util::getMemcache();
         self::$memcache->flush();
     }
@@ -65,6 +72,7 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
             $this->markTestSkipped(self::$skipTestsMessage);
         }
     }
+
     public function testSave()
     {
         $object1 = new SimpleActual();
@@ -352,5 +360,64 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 
         $this->assertEquals($newDate, $object->created);
         $this->assertEquals($newDate, $object->updated);
+    }
+
+    public function testTableIsCompound()
+    {
+        Util::unDescribe(SimpleActual::class);
+
+        self::$connection->query('
+            ALTER TABLE ' . self::getTableName(SimpleActual::class) . '
+            DROP PRIMARY KEY,
+            ADD PRIMARY KEY (`' . SimpleActual::COLUMN_PRIMARY_KEY . '`, `' . SimpleActual::COLUMN_DEFAULT_VALUE . '`) USING BTREE
+        ');
+
+        $this->expectException(\Gyde\Mom\BaseException::class);
+        $this->expectExceptionCode(\Gyde\Mom\BaseException::MULTIPLE_PRIMARY_KEYS);
+
+        $exception = null;
+        try {
+            new SimpleActual();
+        } catch (\Exception $e) {
+            $exception = $e;
+        }
+
+        // Resetting table
+        Util::unDescribe(SimpleActual::class);
+        self::createTable(SimpleActual::class);
+
+        if ($exception !== null) {
+            throw $exception;
+        }
+    }
+
+    public function testWrongPrimaryKey()
+    {
+        Util::unDescribe(SimpleActual::class);
+
+        self::$connection->query('
+            ALTER TABLE ' . self::getTableName(SimpleActual::class) . '
+            CHANGE `' . SimpleActual::COLUMN_PRIMARY_KEY . '` `' . SimpleActual::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL,
+            DROP PRIMARY KEY,
+            ADD PRIMARY KEY (`' . SimpleActual::COLUMN_DEFAULT_VALUE . '`) USING BTREE
+        ');
+
+        $this->expectException(\Gyde\Mom\BaseException::class);
+        $this->expectExceptionCode(\Gyde\Mom\BaseException::KEY_MISMATCH);
+
+        $exception = null;
+        try {
+            new SimpleActual();
+        } catch (\Exception $e) {
+            $exception = $e;
+        }
+
+        // Resetting table
+        Util::unDescribe(SimpleActual::class);
+        self::createTable(SimpleActual::class);
+
+        if ($exception !== null) {
+            throw $exception;
+        }
     }
 }
