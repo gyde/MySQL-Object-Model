@@ -2,8 +2,7 @@
 
 namespace tests;
 
-use tests\classes\CompoundActual;
-use tests\classes\CompoundAutoIncrement;
+use tests\classes\{CompoundActual, CompoundKeySainity};
 use Gyde\Mom\BaseException;
 
 class CompoundTest extends \PHPUnit\Framework\TestCase
@@ -13,34 +12,14 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
     private static $skipTests = false;
     private static $skipTestsMessage = '';
     private static $autoIncrement = 1;
+    private static $createdTables = [];
 
     public static function setUpBeforeClass(): void
     {
         try {
             self::$connection = Util::getConnection();
             \Gyde\Mom\Base::setConnection(self::$connection, true);
-            $sqls[] = 'DROP TABLE IF EXISTS ' . CompoundActual::DB . '.' . CompoundActual::TABLE . ';';
-            $sqls[] = 'DROP TABLE IF EXISTS ' . CompoundAutoIncrement::DB . '.' . CompoundAutoIncrement::TABLE . ';';
-            $sqls[] = 'CREATE TABLE ' . CompoundActual::DB . '.' . CompoundActual::TABLE . ' (' .
-                ' `' . CompoundActual::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL' .
-                ', `' . CompoundActual::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL' .
-                ', `' . CompoundActual::COLUMN_KEY3 . '` INT(10) UNSIGNED NOT NULL' .
-                ', `' . CompoundActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
-                ', `' . CompoundActual::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
-                ', `' . CompoundActual::COLUMN_UPDATED . '` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP' .
-                ', `' . CompoundActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
-                ', PRIMARY KEY (`' . CompoundActual::COLUMN_KEY1 . '`,`' . CompoundActual::COLUMN_KEY2 . '`,`' . CompoundActual::COLUMN_KEY3 . '`)' .
-                ') ENGINE = MYISAM;';
-            $sqls[] = 'CREATE TABLE ' . CompoundAutoIncrement::DB . '.' . CompoundAutoIncrement::TABLE . ' (' .
-            ' `' . CompoundAutoIncrement::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT' .
-            ', `' . CompoundAutoIncrement::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL' .
-            ', `' . CompoundAutoIncrement::COLUMN_KEY3 . '` INT(10) UNSIGNED NOT NULL' .
-            ', PRIMARY KEY (`' . CompoundAutoIncrement::COLUMN_KEY1 . '`,`' . CompoundAutoIncrement::COLUMN_KEY2 . '`,`' . CompoundAutoIncrement::COLUMN_KEY3 . '`)' .
-            ') ENGINE = MYISAM;';
-
-            foreach ($sqls as $sql) {
-                $res = self::$connection->exec($sql);
-            }
+            self::createTable(CompoundActual::class);
         } catch (\PDOException $e) {
             self::$skipTests = true;
             self::$skipTestsMessage = $e->getMessage();
@@ -50,12 +29,40 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
         \Gyde\Mom\Base::setMemcache(self::$memcache, 300);
     }
 
+    private static function getTableName(string $class)
+    {
+        return '`' . $class::DB . '`.`' . $class::TABLE . '`';
+    }
+
+    private static function createTable(string $class)
+    {
+        $table = static::getTableName($class);
+
+        self::$connection->exec('
+            DROP TABLE IF EXISTS ' . $table . ';
+            CREATE TABLE ' . $table . ' (
+                 `' . $class::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL
+                , `' . $class::COLUMN_KEY2 . '` INT(10) UNSIGNED NOT NULL
+                , `' . $class::COLUMN_KEY3 . '` INT(10) UNSIGNED NOT NULL
+                , `' . $class::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'
+                , `' . $class::COLUMN_CREATED . '` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                , `' . $class::COLUMN_UPDATED . '` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                , `' . $class::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE
+                , PRIMARY KEY (`' . $class::COLUMN_KEY1 . '`,`' . $class::COLUMN_KEY2 . '`,`' . $class::COLUMN_KEY3 . '`)
+                ) ENGINE = MYISAM;
+        ');
+
+        if (!in_array($table, self::$createdTables)) {
+            self::$createdTables[] = $table;
+        }
+    }
+
     public static function tearDownAfterClass(): void
     {
         self::$connection = Util::getConnection();
-        $sql = 'DROP TABLE ' . CompoundActual::DB . '.' . CompoundActual::TABLE;
+        $sqls = array_map(fn($table) => 'DROP TABLE ' . $table . ';', self::$createdTables);
+        self::$connection->query(join("\n", $sqls));
 
-        self::$connection->query($sql);
         self::$memcache = new \Memcached($_SERVER['MEMCACHE_HOST']);
         self::$memcache->flush();
     }
@@ -215,12 +222,69 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
 
     public function testSaveAutoIncrement()
     {
+        Util::unDescribe(CompoundActual::class);
+
+        self::$connection->query('
+            ALTER TABLE ' . self::getTableName(CompoundActual::class) . '
+            CHANGE `' . CompoundActual::COLUMN_KEY1 . '` `' . CompoundActual::COLUMN_KEY1 . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT
+        ');
+
         $this->expectException(BaseException::class);
-        $this->expectExceptionCode(12);
-        $object1 = new CompoundAutoIncrement(self::$connection);
-        $object1->key1 = 42;
-        $object1->key2 = 'test';
-        $object1->key3 = '';
-        $object1->save();
+        $this->expectExceptionCode(BaseException::COMPOUND_KEY_AUTO_INCREMENT);
+
+        $exception = null;
+        try {
+            $object1 = new CompoundActual();
+            $object1->key1 = 42;
+            $object1->key2 = 'test';
+            $object1->key3 = '';
+            $object1->save();
+        } catch (\Exception $e) {
+            $exception = $e;
+        }
+
+        // Resetting table
+        Util::unDescribe(CompoundActual::class);
+        self::createTable(CompoundActual::class);
+
+        if ($exception !== null) {
+            throw $exception;
+        }
+    }
+
+    public function testTableNotCompound()
+    {
+        $this->expectException(BaseException::class);
+        $this->expectExceptionCode(BaseException::COMPOUND_KEYS_NOT_COMPOUND);
+        new CompoundKeySainity();
+    }
+
+    public function testWrongPrimaryKey()
+    {
+        Util::unDescribe(CompoundActual::class);
+
+        self::$connection->query('
+            ALTER TABLE ' . self::getTableName(CompoundActual::class) . '
+            DROP PRIMARY KEY,
+            ADD PRIMARY KEY (`' . CompoundActual::COLUMN_KEY2 . '`, `' . CompoundActual::COLUMN_KEY1 . '`) USING BTREE
+        ');
+
+        $this->expectException(\Gyde\Mom\BaseException::class);
+        $this->expectExceptionCode(\Gyde\Mom\BaseException::KEY_MISMATCH);
+
+        $exception = null;
+        try {
+            new CompoundActual();
+        } catch (\Exception $e) {
+            $exception = $e;
+        }
+
+        // Resetting table
+        Util::unDescribe(CompoundActual::class);
+        self::createTable(CompoundActual::class);
+
+        if ($exception !== null) {
+            throw $exception;
+        }
     }
 }
