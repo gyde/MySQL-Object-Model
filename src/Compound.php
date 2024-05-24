@@ -27,12 +27,12 @@ class Compound extends Base
     public static function getByIds(array $ids)
     {
         $class = get_called_class();
-        self::checkDbAndTableConstants($class);
+        static::checkDbAndTableConstants($class);
         self::hasCompoundKeys();
 
         // early return from cache
         $selector = static::getSelector($ids);
-        if (($entry = self::getCacheEntry($selector)) !== false) {
+        if (($entry = static::getCacheEntry($selector)) !== false) {
             return $entry;
         }
 
@@ -43,7 +43,7 @@ class Compound extends Base
             $new->fillByStatic($row);
         }
 
-        self::setCacheEntry($selector, $new);
+        static::setCacheEntry($selector, $new);
 
         return $new;
     }
@@ -63,7 +63,7 @@ class Compound extends Base
         }
 
         $ids = array();
-        foreach (self::getCompoundKeys() as $key) {
+        foreach (static::getCompoundKeys() as $key) {
             $ids[$key] = $this->$key;
         }
 
@@ -79,7 +79,7 @@ class Compound extends Base
             static::setStaticEntry($this->__mbSelector, $this);
         }
 
-        self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
+        static::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
     }
 
     /**
@@ -92,7 +92,7 @@ class Compound extends Base
         $keys = $this->getKeyPairs();
 
         $sql =
-            'DELETE FROM `' . self::getDbName() . '`.`' . static::TABLE . '`' .
+            'DELETE FROM `' . static::getDbName() . '`.`' . static::TABLE . '`' .
             ' WHERE ' . join(' AND ', $keys);
 
         static::tryToDelete($sql);
@@ -113,11 +113,11 @@ class Compound extends Base
             $values = array_merge($keys, $values);
 
             return
-                'INSERT INTO `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
+                'INSERT INTO `' . static::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values);
         } elseif (count($values) > 0) {
             return
-                'UPDATE `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
+                'UPDATE `' . static::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values) .
                 ' WHERE ' . join(' AND ', $keys);
         }
@@ -134,7 +134,7 @@ class Compound extends Base
     protected function getValuePairs()
     {
         $values = [];
-        $compoundKeys = self::getCompoundKeys();
+        $compoundKeys = static::getCompoundKeys();
         foreach (static::describe() as $field) {
             $name = $field['Field'];
 
@@ -190,7 +190,7 @@ class Compound extends Base
     {
         $sql = self::buildCompoundSql($ids, [static::class, 'escapeStatic']);
 
-        $res = self::queryStatic($sql);
+        $res = static::queryStatic($sql);
 
         return $res->fetch();
     }
@@ -206,7 +206,7 @@ class Compound extends Base
     {
         $wheres = [];
         $description = static::describe();
-        foreach (self::getCompoundKeys() as $key) {
+        foreach (static::getCompoundKeys() as $key) {
             if ($description[$key]['Extra'] == 'auto_increment') {
                 throw new BaseException(BaseException::COMPOUND_KEY_AUTO_INCREMENT, get_called_class() . ' uses a table with a compound key, where one of the fields is set to auto increment, please use Simple instead.');
             }
@@ -229,7 +229,7 @@ class Compound extends Base
     private static function buildCompoundSql($ids, $callback)
     {
         $wheres = array();
-        foreach (self::getCompoundKeys() as $key) {
+        foreach (static::getCompoundKeys() as $key) {
             if (!array_key_exists($key, $ids)) {
                 throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $key . ' is not present amoung ids');
             }
@@ -242,7 +242,7 @@ class Compound extends Base
         }
 
         $sql =
-            'SELECT * FROM `' . self::getDbName() . '`.`' . static::TABLE . '`' .
+            'SELECT * FROM `' . static::getDbName() . '`.`' . static::TABLE . '`' .
             ' WHERE ' . join(' AND ', $wheres);
 
         return $sql;
@@ -255,7 +255,7 @@ class Compound extends Base
     protected function getRowIdentifier()
     {
         $identifier = [];
-        foreach (self::getCompoundKeys() as $key) {
+        foreach (static::getCompoundKeys() as $key) {
             $identifier[] = $this->{$key};
         }
 
@@ -272,7 +272,7 @@ class Compound extends Base
         self::validateIds($row);
 
         $selector = [];
-        foreach (self::getCompoundKeys() as $key) {
+        foreach (static::getCompoundKeys() as $key) {
             $selector[] = $key . '_' . $row[$key];
         }
 
@@ -297,7 +297,7 @@ class Compound extends Base
       */
     private static function validateIds($ids)
     {
-        $difs = array_diff(self::getCompoundKeys(), array_keys($ids));
+        $difs = array_diff(static::getCompoundKeys(), array_keys($ids));
         if (count($difs) != 0) {
             throw new BaseException(BaseException::COMPOUND_KEY_MISSING_IN_WHERE, get_called_class() . '->' . __FUNCTION__ . ' failed to fetch object from database, ' . $difs[0] . ' is not present amoung ids');
         }

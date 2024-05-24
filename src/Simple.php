@@ -35,7 +35,7 @@ class Simple extends Base
     public static function getById($id, $allowNull = false)
     {
         $class = get_called_class();
-        self::checkDbAndTableConstants($class);
+        static::checkDbAndTableConstants($class);
         self::hasPrimaryKey();
 
         if (empty($id) && $allowNull) {
@@ -49,7 +49,7 @@ class Simple extends Base
         $selector = static::getSelector([static::COLUMN_PRIMARY_KEY => $id]);
 
         // early return from cache
-        if (($entry = self::getCacheEntry($selector)) !== false) {
+        if (($entry = static::getCacheEntry($selector)) !== false) {
             return $entry;
         }
 
@@ -59,7 +59,7 @@ class Simple extends Base
             $new->fillByStatic($row);
         }
 
-        self::setCacheEntry($selector, $new);
+        static::setCacheEntry($selector, $new);
 
         return $new;
     }
@@ -89,7 +89,7 @@ class Simple extends Base
     {
         $id = self::escapeStatic($id);
         $sql = self::getRowByIdSelect($id);
-        $res = self::queryStatic($sql);
+        $res = static::queryStatic($sql);
 
         return $res->fetch();
     }
@@ -102,7 +102,7 @@ class Simple extends Base
     private static function getRowByIdSelect($id)
     {
         return
-            'SELECT * FROM `' . self::getDbName() . '`.`' . static::TABLE . '`' .
+            'SELECT * FROM `' . static::getDbName() . '`.`' . static::TABLE . '`' .
             ' WHERE `' . static::COLUMN_PRIMARY_KEY . '` = ' . $id;
     }
 
@@ -139,7 +139,7 @@ class Simple extends Base
             static::setStaticEntry($this->__mbSelector, $this);
         }
 
-        self::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
+        static::setMemcacheEntry($this->__mbSelector, $this, self::CONTEXT_OBJECT);
     }
 
     /**
@@ -156,7 +156,7 @@ class Simple extends Base
         }
 
         $sql =
-            'DELETE FROM `' . self::getDbName() . '`.`' . static::TABLE . '`' .
+            'DELETE FROM `' . static::getDbName() . '`.`' . static::TABLE . '`' .
             ' WHERE `' . static::COLUMN_PRIMARY_KEY . '` = ' . $this->escapeObject($id);
 
         static::tryToDelete($sql);
@@ -198,11 +198,11 @@ class Simple extends Base
 
         if ($this->isNew()) {
             return
-                'INSERT INTO `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
+                'INSERT INTO `' . static::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values);
         } elseif (count($values) > 0) {
             return
-                'UPDATE `' . self::getDbName() . '`.`' . static::TABLE . '` SET' .
+                'UPDATE `' . static::getDbName() . '`.`' . static::TABLE . '` SET' .
                 ' ' . join(', ', $values) .
                 ' WHERE `' . static::COLUMN_PRIMARY_KEY . '` = ' . $this->escapeObject($this->$primaryKey);
         }

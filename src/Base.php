@@ -163,10 +163,10 @@ abstract class Base
             }
         }
 
-        $description = self::describe();
+        $description = static::describe();
 
         foreach ($description as $field) {
-            if (!in_array($field['Default'], self::$__mbProtectedValueDefaults)) {
+            if (!in_array($field['Default'], static::$__mbProtectedValueDefaults)) {
                 $this->{$field['Field']} = $field['Default'];
             } else {
                 $this->{$field['Field']} = null;
@@ -232,7 +232,7 @@ abstract class Base
     public static function getDbName()
     {
         if (is_array(static::$__mbDatabaseNames)) {
-            if (($name = self::getNestedByClass(self::$__mbDatabaseNames, get_called_class())) !== false) {
+            if (($name = self::getNestedByClass(static::$__mbDatabaseNames, get_called_class())) !== false) {
                 return $name;
             }
         }
@@ -252,7 +252,7 @@ abstract class Base
       */
     public static function getOne($where = null, $order = null)
     {
-        $res = self::getAllByWhereGeneric($where, $order, false, 1, 0);
+        $res = static::getAllByWhereGeneric($where, $order, false, 1, 0);
 
         if (count($res) == 0) {
             return null;
@@ -272,7 +272,7 @@ abstract class Base
       */
     public static function getAll($order = null, $keyed = false, $limit = null, $offset = null, $buffered = true)
     {
-        return self::getAllByWhereGeneric(null, $order, $keyed, $limit, $offset, $buffered);
+        return static::getAllByWhereGeneric(null, $order, $keyed, $limit, $offset, $buffered);
     }
 
     /**
@@ -286,7 +286,7 @@ abstract class Base
       */
     public static function getAllByWhere($where, $order = null, $keyed = false, $limit = null, $offset = null)
     {
-        return self::getAllByWhereGeneric($where, $order, $keyed, $limit, $offset);
+        return static::getAllByWhereGeneric($where, $order, $keyed, $limit, $offset);
     }
 
     /**
@@ -303,7 +303,7 @@ abstract class Base
     {
         $many = array();
 
-        $sql = 'SELECT * FROM `' . self::getDbName() . '`.`' . static::TABLE . '`';
+        $sql = 'SELECT * FROM `' . static::getDbName() . '`.`' . static::TABLE . '`';
 
         if ($where) {
             $sql .= ' WHERE ' . $where;
@@ -317,15 +317,15 @@ abstract class Base
             $sql .= ' LIMIT ' . (int)$offset . ',' . (int)$limit;
         }
 
-        $res = self::queryStatic($sql, $buffered);
+        $res = static::queryStatic($sql, $buffered);
         while (($row = $res->fetch()) !== false) {
             $selector = static::getSelector($row);
-            $entry = self::getCacheEntry($selector);
+            $entry = static::getCacheEntry($selector);
 
             if ($entry === false) {
                 $entry = new static();
                 $entry->fillByStatic($row);
-                self::setCacheEntry($selector, $entry);
+                static::setCacheEntry($selector, $entry);
             }
 
             if ($keyed) {
@@ -351,11 +351,11 @@ abstract class Base
         }
 
         $sql =
-            'DELETE FROM `' . self::getDbName() . '`.`' . static::TABLE . '`' .
+            'DELETE FROM `' . static::getDbName() . '`.`' . static::TABLE . '`' .
             ' WHERE ' . $where;
 
         try {
-            self::queryStatic($sql);
+            static::queryStatic($sql);
         } catch (BaseException $e) {
             throw new BaseException(BaseException::OBJECTS_NOT_DELETED, $e->getMessage(), $e);
         }
@@ -367,7 +367,7 @@ abstract class Base
       */
     public static function getCount()
     {
-        return self::getCountByWhere();
+        return static::getCountByWhere();
     }
 
     /**
@@ -377,13 +377,13 @@ abstract class Base
       */
     public static function getCountByWhere($where = null)
     {
-        $sql = 'SELECT COUNT(*) FROM `' . self::getDbName() . '`.`' . static::TABLE . '`';
+        $sql = 'SELECT COUNT(*) FROM `' . static::getDbName() . '`.`' . static::TABLE . '`';
 
         if (!empty($where)) {
             $sql .= ' WHERE ' . $where;
         }
 
-        $result = self::queryStatic($sql);
+        $result = static::queryStatic($sql);
         return $result->fetchColumn(0);
     }
 
@@ -467,21 +467,21 @@ abstract class Base
     protected static function describe()
     {
         $class = get_called_class();
-        if (array_key_exists($class, self::$__mbDescriptions) && is_array(self::$__mbDescriptions[$class])) {
+        if (array_key_exists($class, static::$__mbDescriptions) && is_array(static::$__mbDescriptions[$class])) {
             if (static::VERBOSE_STATIC_CACHE) {
                 error_log('Getting static description for class: ' . $class);
             }
 
-            return self::$__mbDescriptions[$class];
+            return static::$__mbDescriptions[$class];
         }
 
-        if (($entry = self::getMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR)) !== false) {
-            self::$__mbDescriptions[$class] = $entry;
+        if (($entry = static::getMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR)) !== false) {
+            static::$__mbDescriptions[$class] = $entry;
             return $entry;
         }
 
-        $sql = 'DESCRIBE `' . self::getDbName() . '`.`' . static::TABLE . '`';
-        $res = self::queryStatic($sql);
+        $sql = 'DESCRIBE `' . static::getDbName() . '`.`' . static::TABLE . '`';
+        $res = static::queryStatic($sql);
         $description = array();
         while (($row = $res->fetch()) !== false) {
             // If Field start is equal to self::RESERVED_PREFIX
@@ -492,12 +492,12 @@ abstract class Base
             $description[$row['Field']] = $row;
         }
 
-        self::setMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR, $description);
+        static::setMemcacheEntry(self::CLASS_DESCRIPTION_SELECTOR, $description);
 
         if (static::VERBOSE_STATIC_CACHE) {
             error_log('Setting static description for class: ' . $class);
         }
-        self::$__mbDescriptions[$class] = $description;
+        static::$__mbDescriptions[$class] = $description;
 
         return $description;
     }
@@ -526,7 +526,7 @@ abstract class Base
     protected function getFields()
     {
         $fields = [];
-        foreach (self::describe() as $field) {
+        foreach (static::describe() as $field) {
             $fields[] = $field['Field'];
         }
 
@@ -540,12 +540,12 @@ abstract class Base
       */
     protected static function isFieldProtected(string $field)
     {
-        $fields = self::describe();
+        $fields = static::describe();
         if (!isset($fields[$field])) {
             return false;
         }
-        return in_array($fields[$field]['Default'], self::$__mbProtectedValueDefaults) ||
-        in_array($fields[$field]['Extra'], self::$__mbProtectedValueExtras);
+        return in_array($fields[$field]['Default'], static::$__mbProtectedValueDefaults) ||
+        in_array($fields[$field]['Extra'], static::$__mbProtectedValueExtras);
     }
 
     /**
@@ -602,7 +602,7 @@ abstract class Base
     protected static function queryStatic($sql, $buffered = true)
     {
         if (!$buffered) {
-            self::describe();
+            static::describe();
         }
 
         return static::query(self::getConnection(), $sql, $buffered);
@@ -737,7 +737,7 @@ abstract class Base
     {
         $class = get_called_class();
         $str = 'Instance of ' . $class . ':' . "\n";
-        foreach (self::describe() as $field) {
+        foreach (static::describe() as $field) {
             $str .= $field['Field'] . ': ' . var_export($this->{$field['Field']}, true) . "\n";
         }
 
@@ -765,13 +765,13 @@ abstract class Base
       */
     private static function getConnection()
     {
-        $connection = self::getNestedByClass(self::$__mbConnections, get_called_class());
+        $connection = self::getNestedByClass(static::$__mbConnections, get_called_class());
         if ($connection !== false) {
             return $connection;
         }
 
-        if (isset(self::$__mbConnections[self::GLOBAL_CONNECTION])) {
-            return self::$__mbConnections[self::GLOBAL_CONNECTION];
+        if (isset(static::$__mbConnections[self::GLOBAL_CONNECTION])) {
+            return static::$__mbConnections[self::GLOBAL_CONNECTION];
         }
 
         throw new BaseException(BaseException::MISSING_CONNECTION);
@@ -786,10 +786,10 @@ abstract class Base
     public static function setConnection(\PDO $connection, $global = false)
     {
         $class = get_called_class();
-        if ($global || in_array($class, self::$__mbProtectedClasses) === true) {
-            self::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
+        if ($global || in_array($class, static::$__mbProtectedClasses) === true) {
+            static::$__mbConnections[self::GLOBAL_CONNECTION] = $connection;
         } else {
-            self::$__mbConnections[$class] = $connection;
+            static::$__mbConnections[$class] = $connection;
         }
     }
 
@@ -800,13 +800,13 @@ abstract class Base
       */
     private static function getMemcache()
     {
-        $memcache = self::getNestedByClass(self::$__mbMemcaches, get_called_class());
+        $memcache = self::getNestedByClass(static::$__mbMemcaches, get_called_class());
         if ($memcache !== false) {
             return $memcache;
         }
 
-        if (isset(self::$__mbMemcaches[self::GLOBAL_MEMCACHE])) {
-            return self::$__mbMemcaches[self::GLOBAL_MEMCACHE];
+        if (isset(static::$__mbMemcaches[self::GLOBAL_MEMCACHE])) {
+            return static::$__mbMemcaches[self::GLOBAL_MEMCACHE];
         }
 
         return false;
@@ -868,13 +868,13 @@ abstract class Base
     protected static function getCacheEntry($selector)
     {
         // early return from static cache
-        if (($entry = self::getStaticEntry($selector)) !== false) {
+        if (($entry = static::getStaticEntry($selector)) !== false) {
             return $entry;
         }
 
         // early return from memcache
-        if (($entry = self::getMemcacheEntry($selector)) !== false) {
-            self::setStaticEntry($selector, $entry);
+        if (($entry = static::getMemcacheEntry($selector)) !== false) {
+            static::setStaticEntry($selector, $entry);
             return $entry;
         }
 
@@ -893,9 +893,9 @@ abstract class Base
           * Objects that are null will be store in static cache but not memcache
           * To reselect the same non exsistant element during a session is unnessesary but to put it in memcache would be unwise.
           */
-        self::setStaticEntry($selector, $object);
+        static::setStaticEntry($selector, $object);
         if ($object !== null) {
-            self::setMemcacheEntry($selector, $object);
+            static::setMemcacheEntry($selector, $object);
         }
     }
 
@@ -907,7 +907,7 @@ abstract class Base
     protected function deleteCacheEntry($selector, $customSelector = false)
     {
         $this->deleteMemcacheEntry($selector, $customSelector);
-        self::deleteStaticEntry($selector);
+        static::deleteStaticEntry($selector);
     }
 
     /**
@@ -919,11 +919,11 @@ abstract class Base
     {
         if (static::useStaticCache()) {
             $class = get_called_class();
-            if (isset(self::$__mbStaticCache[$class][$selector])) {
+            if (isset(static::$__mbStaticCache[$class][$selector])) {
                 if (static::VERBOSE_STATIC_CACHE) {
                     error_log('Getting static entry with class: ' . $class . ' and selector: ' . $selector);
                 }
-                return self::$__mbStaticCache[$class][$selector];
+                return static::$__mbStaticCache[$class][$selector];
             }
         }
 
@@ -951,7 +951,7 @@ abstract class Base
             if (static::VERBOSE_STATIC_CACHE) {
                 error_log('Setting static entry with class: ' . $class . ' and selector: ' . $selector);
             }
-            self::$__mbStaticCache[$class][$selector] = $value;
+            static::$__mbStaticCache[$class][$selector] = $value;
         }
     }
 
@@ -966,7 +966,7 @@ abstract class Base
             if (static::VERBOSE_STATIC_CACHE) {
                 error_log('Deleting static entry with class: ' . $class . ' and selector: ' . $selector);
             }
-            unset(self::$__mbStaticCache[$class][$selector]);
+            unset(static::$__mbStaticCache[$class][$selector]);
         }
     }
 
@@ -980,7 +980,7 @@ abstract class Base
             error_log('Deleting all static entries with class: ' . $class);
         }
 
-        self::$__mbStaticCache[$class] = null;
+        static::$__mbStaticCache[$class] = null;
     }
 
     /**
@@ -991,7 +991,7 @@ abstract class Base
     protected static function setMemcacheEntry($selector, $value, $context = self::CONTEXT_STATIC)
     {
         if (static::useMemcache()) {
-            $key = self::getMemcacheKey($selector);
+            $key = static::getMemcacheKey($selector);
             if ($context == self::CONTEXT_STATIC) {
                 if (($memcache = self::getMemcache()) !== false) {
                     if (static::VERBOSE_MEMCACHE) {
@@ -1026,7 +1026,7 @@ abstract class Base
             return false;
         }
 
-        $key = self::getMemcacheKey($selector);
+        $key = static::getMemcacheKey($selector);
         $data = $memcache['memcache']->get($key);
         if ($data === false) {
             return false;
@@ -1047,7 +1047,7 @@ abstract class Base
     {
         if (static::useMemcache()) {
             if ($this->__mbMemcache !== false) {
-                $key = self::getMemcacheKey($selector, $customSelector);
+                $key = static::getMemcacheKey($selector, $customSelector);
                 if (static::VERBOSE_MEMCACHE) {
                     error_log('Deleting memcache entry with selector: ' . $key);
                 }
@@ -1096,7 +1096,7 @@ abstract class Base
       */
     protected static function checkDbAndTableConstants($classname)
     {
-        if (!defined('static::DB') && self::getDbName() === false) {
+        if (!defined('static::DB') && static::getDbName() === false) {
             throw new BaseException(BaseException::MISSING_DB_DEFINITION, $classname . ' has no DB defined');
         }
 
@@ -1145,7 +1145,7 @@ abstract class Base
     {
         $class = get_called_class();
         $data = [];
-        foreach (self::describe() as $field) {
+        foreach (static::describe() as $field) {
             $data[$field['Field']] = $this->{$field['Field']};
         }
         $this->__mbSerializeTimestamp = time();
@@ -1165,7 +1165,7 @@ abstract class Base
     public function __unserialize($data)
     {
         $this->__mbConnection = self::getConnection();
-        $description = self::describe();
+        $description = static::describe();
         foreach ($description as $field) {
             $this->{$field['Field']} = $data[$field['Field']];
         }
