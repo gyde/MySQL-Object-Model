@@ -189,7 +189,7 @@ class Simple extends Base
                 continue;
             }
 
-            if (static::isFieldProtected($field['Field']) && isset($this->__mbOriginalValues[$name]) && $this->$name === $this->__mbOriginalValues[$name]) {
+            if (static::isFieldProtected($field['Field']) && array_key_exists($name, $this->__mbOriginalValues) && $this->$name === $this->__mbOriginalValues[$name]) {
                 continue;
             }
 
