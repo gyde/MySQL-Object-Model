@@ -285,9 +285,33 @@ class Compound extends Base
       */
     private static function hasCompoundKeys()
     {
-        if (!defined('static::COLUMN_COMPOUND_KEYS')) {
+        if ((self::$__mbKeyValidated[get_called_class()] ?? false) == true) {
+            return;
+        }
+
+        if (!defined('static::COLUMN_COMPOUND_KEYS') || !is_string(static::COLUMN_COMPOUND_KEYS)) {
             throw new BaseException(BaseException::COMPOUND_KEYS_NOT_DEFINED, get_called_class() . ' has no COLUMN_COMPOUND_KEYS const');
         }
+
+        $definedKeys = static::getCompoundKeys();
+        sort($definedKeys);
+        if (count($definedKeys) < 2) {
+            throw new BaseException(BaseException::COMPOUND_KEYS_NOT_COMPOUND);
+        }
+
+        $dbKeys = [];
+        foreach (self::describe() as $row) {
+            if ($row['Key'] == 'PRI') {
+                $dbKeys[] = $row['Field'];
+            }
+        }
+        sort($dbKeys);
+
+        if ($definedKeys != $dbKeys) {
+            throw new BaseException(BaseException::KEY_MISMATCH);
+        }
+
+        self::$__mbKeyValidated[get_called_class()] = true;
     }
 
     /**

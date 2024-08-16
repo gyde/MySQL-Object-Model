@@ -235,9 +235,28 @@ class Simple extends Base
       */
     private static function hasPrimaryKey()
     {
-        if (!defined('static::COLUMN_PRIMARY_KEY')) {
+        if ((self::$__mbKeyValidated[get_called_class()] ?? false) == true) {
+            return;
+        }
+
+        if (!defined('static::COLUMN_PRIMARY_KEY') || !is_string(static::COLUMN_PRIMARY_KEY)) {
             throw new BaseException(BaseException::PRIMARY_KEY_NOT_DEFINED, get_called_class() . ' has no COLUMN_PRIMARY_KEY const');
         }
+
+        $key = null;
+        foreach (self::describe() as $row) {
+            if ($row['Key'] == 'PRI') {
+                if ($key !== null) {
+                    throw new BaseException(BaseException::MULTIPLE_PRIMARY_KEYS);
+                }
+                $key = $row['Field'];
+            }
+        }
+        if ($key !== static::COLUMN_PRIMARY_KEY) {
+            throw new BaseException(BaseException::KEY_MISMATCH);
+        }
+
+        self::$__mbKeyValidated[get_called_class()] = true;
     }
 
     /**
