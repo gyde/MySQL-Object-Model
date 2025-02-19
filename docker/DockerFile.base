@@ -1,5 +1,5 @@
 FROM debian:bookworm
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get --no-install-recommends -y install apt-utils ca-certificates
 RUN apt-get update && apt-get -y install vim htop wget
 # Install webserver

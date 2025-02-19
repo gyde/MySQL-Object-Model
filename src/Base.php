@@ -140,7 +140,7 @@ abstract class Base
       * @param \memcached $memcache memcache connection
       * @param int $memcacheExpiration memcache expiration in seconds
       */
-    public function __construct(\PDO $connection = null, \Memcached $memcache = null, $memcacheExpiration = 0)
+    public function __construct(?\PDO $connection = null, ?\Memcached $memcache = null, $memcacheExpiration = 0)
     {
         $class = get_called_class();
         $this->checkDbAndTableConstants($class);
@@ -1016,7 +1016,7 @@ abstract class Base
       * @param \PDO $connection PDO connection
       * @return data will return false on error or when memcache is not enabled
       */
-    protected static function getMemcacheEntry($selector, \PDO $connection = null)
+    protected static function getMemcacheEntry($selector, ?\PDO $connection = null)
     {
         if (!static::useMemcache()) {
             return false;

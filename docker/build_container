@@ -1,2 +1,3 @@
 #!/bin/sh
+cd docker
 docker image build -f DockerFile.base -t mom-unit-test .
