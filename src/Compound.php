@@ -11,7 +11,7 @@ class Compound extends Base
       * @param \memcached $memcache memcache connection
       * @param int $memcacheExpiration memcache expiration in seconds
       */
-    public function __construct(?\PDO $connection, ?\Memcached $memcache, $memcacheExpiration = 0)
+    public function __construct(?\PDO $connection = null, ?\Memcached $memcache = null, $memcacheExpiration = 0)
     {
         self::hasCompoundKeys();
         parent::__construct($connection, $memcache, $memcacheExpiration);
