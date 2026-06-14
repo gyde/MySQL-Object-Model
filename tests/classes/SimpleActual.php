@@ -9,6 +9,7 @@ class SimpleActual extends \Gyde\Mom\Simple
 
     public const USE_STATIC_CACHE = true;
     public const USE_MEMCACHE = true;
+    public const USE_CHANGE_TRACKING = true;
 
     public const COLUMN_PRIMARY_KEY = 'primary_key';
     public const COLUMN_DEFAULT_VALUE = 'state';

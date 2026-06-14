@@ -251,5 +251,7 @@ class Simple extends Base
         $this->__mbNewObject = true;
         $this->__mbSerializeTimestamp = 0;
         $this->__mbStaticCacheTimestamp = 0;
+        // Re-baseline so the clone tracks independently from its own current values
+        $this->snapshotChangeOriginals();
     }
 }
