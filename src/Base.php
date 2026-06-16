@@ -19,7 +19,8 @@ abstract class Base
     public const CLASS_REVISION = 0;
     public const CLASS_DESCRIPTION_SELECTOR = '__mbDescription';
 
-    public const VERBOSE_SQL = false;
+    public const LOG_QUERIES = false;
+    public const LOG_QUERY_ERRORS = false;
     public const VERBOSE_STATIC_CACHE = false;
     public const VERBOSE_MEMCACHE = false;
 
@@ -710,9 +711,7 @@ abstract class Base
       */
     protected static function query($connection, $sql, $buffered = true)
     {
-        if (static::VERBOSE_SQL) {
-            error_log($sql);
-        }
+        static::writeLog(static::LOG_QUERIES, $sql);
 
         if (!$buffered) {
             $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
@@ -721,6 +720,7 @@ abstract class Base
         try {
             $result = $connection->query($sql, \PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
+            static::writeLog(static::LOG_QUERY_ERRORS, $sql . ' — ' . $e->getMessage());
             throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         } finally {
             $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
@@ -759,13 +759,12 @@ abstract class Base
       */
     protected static function prepare($connection, $sql)
     {
-        if (static::VERBOSE_SQL) {
-            error_log($sql);
-        }
+        static::writeLog(static::LOG_QUERIES, $sql);
 
         try {
             $result = $connection->prepare($sql);
         } catch (\PDOException $e) {
+            static::writeLog(static::LOG_QUERY_ERRORS, $sql . ' — ' . $e->getMessage());
             throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         }
 
@@ -1234,6 +1233,26 @@ abstract class Base
     protected static function useChangeTracking()
     {
         return (bool)static::USE_CHANGE_TRACKING;
+    }
+
+    /**
+      * Write a log message to the destination specified by a LOG_* constant.
+      * false   → no-op
+      * true    → error_log()
+      * string  → append to that file path via error_log(..., 3, $destination)
+      * @param false|bool|string $destination
+      * @param string $message
+      */
+    private static function writeLog($destination, string $message): void
+    {
+        if ($destination === false) {
+            return;
+        }
+        if ($destination === true) {
+            error_log($message);
+            return;
+        }
+        error_log($message . PHP_EOL, 3, $destination);
     }
 
     /**

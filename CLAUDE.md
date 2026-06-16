@@ -69,10 +69,11 @@ Two opt-in caching layers, enabled per-class via constants:
 
 ### Debugging
 
-Set these constants to `true` on a model class to enable `error_log` output:
-- `VERBOSE_SQL` — logs every SQL statement
-- `VERBOSE_STATIC_CACHE` — logs static cache hits/misses
-- `VERBOSE_MEMCACHE` — logs memcache hits/misses
+Set these constants on a model class (or on `Base` to affect all classes) to enable SQL logging. Constants accept `false` (off), `true` (write via `error_log()`), or a file path string (append to that file):
+- `LOG_QUERIES` — logs every SQL statement before execution
+- `LOG_QUERY_ERRORS` — logs SQL + PDO error message when a query fails
+- `VERBOSE_STATIC_CACHE` — logs static cache hits/misses (true/false only)
+- `VERBOSE_MEMCACHE` — logs memcache hits/misses (true/false only)
 
 ### Tests
 
