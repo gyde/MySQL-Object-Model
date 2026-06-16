@@ -87,7 +87,7 @@ class Compound extends Base
       * Will throw exceptions on all errors, if no exception, then object is deleted
       * @throws BaseException
       */
-    public function delete()
+    public function delete($metaData = null)
     {
         $keys = $this->getKeyPairs();
 

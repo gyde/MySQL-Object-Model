@@ -208,7 +208,7 @@ abstract class Base
       * If delete fails BaseException should be thrown
       * @throws BaseException
       */
-    abstract public function delete();
+    abstract public function delete($metaData = null);
 
     /**
       * Get a rows unique identifier, e.g. primary key, or a compound key

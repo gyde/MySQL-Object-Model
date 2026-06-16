@@ -147,7 +147,7 @@ class Simple extends Base
      * Will throw exception on all failures, if no exception, then object is deleted
      * @throws BaseException
      */
-    public function delete()
+    public function delete($metaData = null)
     {
         $keyname = static::COLUMN_PRIMARY_KEY;
         $id = $this->$keyname;
