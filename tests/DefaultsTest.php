@@ -32,7 +32,9 @@ class DefaultTest extends \PHPUnit\Framework\TestCase
         $sqls[] = 'CREATE TABLE `' . $dbName . '`.`' . $tableName . '` (' .
             ' `' . DefaultActual::COLUMN_PRIMARY_KEY . '` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY' .
             ', `' . DefaultActual::COLUMN_DEFAULT_VALUE . '` ENUM(\'READY\',\'SET\',\'GO\',\'intermediate\') NOT NULL DEFAULT \'READY\'' .
-            ', `' . DefaultActual::COLUMN_UPDATED . '` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT \'0000-00-00 00:00:00\'' .
+            ', `' . DefaultActual::COLUMN_CREATED . '` DATETIME NOT NULL DEFAULT current_timestamp()' .
+            ', `' . DefaultActual::COLUMN_NULLABLE_CREATED . '` DATETIME NULL DEFAULT current_timestamp()' .
+            ', `' . DefaultActual::COLUMN_UPDATED . '` DATETIME ON UPDATE CURRENT_TIMESTAMP NULL DEFAULT NULL' .
             ', `' . DefaultActual::COLUMN_UNIQUE . '` VARCHAR(32) CHARACTER SET ascii UNIQUE' .
             ') ENGINE = MYISAM;';
 
@@ -65,9 +67,35 @@ class DefaultTest extends \PHPUnit\Framework\TestCase
     {
         $object1 = new DefaultActual();
         $object1->save();
-        $this->assertEquals($object1->updated, '0000-00-00 00:00:00');
+
+        $this->assertNotEquals($object1->created, null);
+        $this->assertEquals($object1->updated, null);
+        $this->assertEquals($object1->state, 'READY');
+
         $object1->unique = uniqid();
+        $object1->state = DefaultActual::STATE_SET;
         $object1->save();
-        $this->assertNotEquals($object1->updated, '0000-00-00 00:00:00');
+
+        $this->assertEquals($object1->state, DefaultActual::STATE_SET);
+        $this->assertNotEquals($object1->updated, null);
+    }
+
+    public function testNullableCurrentTimestampDefault()
+    {
+        // A nullable column with DEFAULT current_timestamp() must not have null
+        // inserted explicitly — MySQL should apply the DEFAULT instead
+        $object = new DefaultActual();
+        $object->save();
+
+        $this->assertNotNull(
+            $object->nullable_created,
+            'nullable DATETIME NULL DEFAULT current_timestamp() should be set by MySQL on INSERT, not forced to null'
+        );
+        $this->assertSame(1, preg_match(Util::DATETIME_REGEX, $object->nullable_created));
+
+        // An explicit null assignment must be respected on subsequent saves
+        $object->nullable_created = null;
+        $object->save();
+        $this->assertNull($object->nullable_created, 'Explicitly assigning null to a nullable protected column should persist');
     }
 }

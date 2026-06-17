@@ -146,8 +146,13 @@ class Compound extends Base
                 continue;
             }
 
-            if (static::isFieldProtected($field['Field']) && array_key_exists($name, $this->__mbOriginalValues) && $this->$name === $this->__mbOriginalValues[$name]) {
-                continue;
+            if (static::isFieldProtected($field['Field'])) {
+                if ($this->isNew() && $this->$name === null) {
+                    continue;
+                }
+                if (array_key_exists($name, $this->__mbOriginalValues) && $this->$name === $this->__mbOriginalValues[$name]) {
+                    continue;
+                }
             }
 
             $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
