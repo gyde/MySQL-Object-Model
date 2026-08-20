@@ -714,7 +714,7 @@ abstract class Base
       * @param string $value
       * @return string
       */
-    protected static function escapeStatic($value)
+    public static function escapeStatic($value)
     {
         return self::escape(self::getConnection(), $value);
     }
