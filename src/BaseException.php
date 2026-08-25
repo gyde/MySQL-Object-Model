@@ -46,6 +46,12 @@ class BaseException extends Exception
     public const COMPOUND_KEY_AUTO_INCREMENT = 12;
     public const MESSAGE_12 = 'MOM does not support tables with compound keys that use auto increment';
 
+    public const MULTIPLE_PRIMARY_KEYS = 13;
+    public const MESSAGE_13 = 'More than one primary key was detected';
+
+    public const KEY_MISMATCH = 14;
+    public const MESSAGE_14 = 'The defined key(s) did not match the key(s) in the database table';
+
     public const OBJECT_NOT_SAVED = 100;
     public const MESSAGE_100 = 'Object could not be saved (created/updated)';
 
