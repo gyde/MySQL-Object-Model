@@ -12,6 +12,8 @@ class DefaultActual extends \Gyde\Mom\Simple
 
     public const COLUMN_PRIMARY_KEY = 'primary_key';
     public const COLUMN_DEFAULT_VALUE = 'state';
+    public const COLUMN_CREATED = 'created';
+    public const COLUMN_NULLABLE_CREATED = 'nullable_created';
     public const COLUMN_UPDATED = 'updated';
     public const COLUMN_UNIQUE = 'unique';
 
