@@ -1,26 +1,19 @@
 FROM debian:bookworm
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get --no-install-recommends -y install apt-utils ca-certificates
-RUN apt-get update && apt-get -y install vim htop wget
-# Install webserver
-RUN apt-get --no-install-recommends -y install php-cli php-mysqlnd php-memcached php-dom memcached php-mbstring
-# Install dbserver dependencies
-RUN apt-get install --no-install-recommends -y software-properties-common gnupg
-# Install dbserver key and repo
-RUN apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xcbcb082a1bb943db && \
- add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://mirror.one.com/mariadb/repo/10.4/debian buster main'
-# Create mysql debconf user & password
-COPY container_configs/debconf /root/debconf
-# Install mariadb
-RUN debconf-set-selections /root/debconf && \
- apt-get --no-install-recommends -y install mariadb-server
+RUN apt-get update
+RUN apt-get --no-install-recommends -y install apt-utils
+RUN apt-get --no-install-recommends -y install gnupg software-properties-common ca-certificates dirmngr apt-transport-https lsb-release ca-certificates curl
+RUN apt-get update && apt-get --no-install-recommends -y install gnupg
+# Install sury repo keys
+RUN curl -sSLo /usr/share/keyrings/deb.sury.org-php.gpg https://packages.sury.org/php/apt.gpg && \
+ sh -c 'echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list'
+# Install base packages
+RUN apt-get update && apt-get --no-install-recommends -y install wget vim-nox htop wget
+# Install cli + memcached
+RUN apt-get --no-install-recommends -y install php8.4-cli php8.4-mysql \
+ php8.4-memcached memcached php8.4-gmp php8.4-gd php-pear php8.4-readline php8.4-curl php8.4-xdebug \
+ php8.4-mbstring php8.4-xml
 # Set timezone
 RUN echo "Europe/Copenhagen" > /etc/timezone
 RUN dpkg-reconfigure tzdata
-# Copy data
-RUN echo 'new sql databases 2019-11-26 21.12'
-COPY container_configs/users.sql /root/
-RUN service mariadb start && export MYSQL_PWD=WindTauntCreme && \
- cat /root/users.sql | mysql -h localhost -u root
-# Copy configuration files
-ENTRYPOINT service memcached start && service mariadb start && /bin/bash
+ENTRYPOINT ["/srv/mom/docker/run-mom-unit-test"]

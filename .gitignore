@@ -1,4 +1,6 @@
 *.swp
 build
 tests/.phpunit.result.cache
+tests/mom/*
 .gitconfig
+docker/.env
