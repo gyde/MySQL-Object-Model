@@ -12,7 +12,7 @@ Memcache and Static cache has been added for MOMBase and MOMSimple
 5. [Tools](#Tools)
 
 ## Version
-This version is considered stable and will be version tagged 1.0 once its been field tested with php7.3!
+This version is considered stable and will be version tagged 1.0 once its been field tested with php8.5! The test suite currently passes on PHP 8.5.
 
 Current projects using this project:
  * Solaris - mobilspejd.dk - Scout race navigation system)

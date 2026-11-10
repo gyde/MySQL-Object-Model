@@ -702,6 +702,18 @@ abstract class Base
     }
 
     /**
+      * PDO attribute for MySQL buffered queries.
+      * \PDO::MYSQL_ATTR_* is deprecated as of PHP 8.5 in favour of \Pdo\Mysql (available since 8.4)
+      * @return int
+      */
+    private static function bufferedQueryAttribute()
+    {
+        return defined('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')
+            ? constant('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')
+            : \PDO::MYSQL_ATTR_USE_BUFFERED_QUERY;
+    }
+
+    /**
       * Generic query method
       * @param PDO $connection PDO connection
       * @param string $sql SQL Statement
@@ -714,7 +726,7 @@ abstract class Base
         static::writeLog(static::LOG_QUERIES, $sql);
 
         if (!$buffered) {
-            $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+            $connection->setAttribute(self::bufferedQueryAttribute(), false);
         }
 
         try {
@@ -723,7 +735,7 @@ abstract class Base
             static::writeLog(static::LOG_QUERY_ERRORS, $sql . ' — ' . $e->getMessage());
             throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         } finally {
-            $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+            $connection->setAttribute(self::bufferedQueryAttribute(), true);
         }
 
         return $result;

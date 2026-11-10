@@ -10,9 +10,9 @@ RUN curl -sSLo /usr/share/keyrings/deb.sury.org-php.gpg https://packages.sury.or
 # Install base packages
 RUN apt-get update && apt-get --no-install-recommends -y install wget vim-nox htop wget
 # Install cli + memcached
-RUN apt-get --no-install-recommends -y install php8.4-cli php8.4-mysql \
- php8.4-memcached memcached php8.4-gmp php8.4-gd php-pear php8.4-readline php8.4-curl php8.4-xdebug \
- php8.4-mbstring php8.4-xml
+RUN apt-get --no-install-recommends -y install php8.5-cli php8.5-mysql \
+ php8.5-memcached memcached php8.5-gmp php8.5-gd php-pear php8.5-readline php8.5-curl php8.5-xdebug \
+ php8.5-mbstring php8.5-xml
 # Set timezone
 RUN echo "Europe/Copenhagen" > /etc/timezone
 RUN dpkg-reconfigure tzdata
