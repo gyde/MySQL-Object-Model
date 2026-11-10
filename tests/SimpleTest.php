@@ -226,7 +226,13 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
             $object2 = SimpleActual::getByUniqueMemcached($uniqueKey);
         }
 
-        $this->assertEquals($object1, $object2);
+        // Compare DB-meaningful state (not __mbLastChanges, which is intentionally
+        // not serialized to memcache as it is request-scoped)
+        $this->assertEquals($object1->{SimpleActual::COLUMN_PRIMARY_KEY}, $object2->{SimpleActual::COLUMN_PRIMARY_KEY});
+        $this->assertEquals($object1->{SimpleActual::COLUMN_DEFAULT_VALUE}, $object2->{SimpleActual::COLUMN_DEFAULT_VALUE});
+        $this->assertEquals($object1->{SimpleActual::COLUMN_UNIQUE}, $object2->{SimpleActual::COLUMN_UNIQUE});
+        $this->assertEquals($object1->{SimpleActual::COLUMN_CREATED}, $object2->{SimpleActual::COLUMN_CREATED});
+        $this->assertEquals($object1->getSerializeTimestamp(), $object2->getSerializeTimestamp());
     }
 
     public function testDelete()
@@ -352,5 +358,195 @@ class SimpleTest extends \PHPUnit\Framework\TestCase
 
         $this->assertEquals($newDate, $object->created);
         $this->assertEquals($newDate, $object->updated);
+    }
+
+    // -------------------------------------------------------------------------
+    // Change tracking tests
+    // -------------------------------------------------------------------------
+
+    public function testIsDirtyBeforeSave()
+    {
+        $object = new SimpleActual();
+        $this->assertFalse($object->isDirty(), 'Fresh object with only default values should not be dirty');
+        $this->assertEquals([], $object->getChanges());
+
+        $object->state = SimpleActual::STATE_SET;
+        $this->assertTrue($object->isDirty(), 'Object should be dirty after changing state from its default');
+        $this->assertContains(SimpleActual::COLUMN_DEFAULT_VALUE, $object->getChangedFields());
+
+        $changes = $object->getChanges();
+        $this->assertArrayHasKey(SimpleActual::COLUMN_DEFAULT_VALUE, $changes);
+        $this->assertEquals('READY', $changes[SimpleActual::COLUMN_DEFAULT_VALUE]['old']);
+        $this->assertEquals('SET', $changes[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
+    }
+
+    public function testCleanAfterLoad()
+    {
+        // Create an object to use as DB fixture
+        $setup = new SimpleActual();
+        $setup->unique = uniqid();
+        $setup->state = SimpleActual::STATE_SET;
+        $setup->save();
+
+        // Fetch fresh from DB (bypass static cache) — baseline = DB values
+        SimpleActual::flushStaticEntries();
+        $object = SimpleActual::getById($setup->primary_key);
+        $this->assertFalse($object->isDirty(), 'Freshly loaded object should not be dirty');
+        $this->assertEquals([], $object->getChanges());
+    }
+
+    public function testChangesPersistAcrossSave()
+    {
+        // Create an object, save it, then reload fresh so baseline = DB values
+        $setup = new SimpleActual();
+        $setup->unique = uniqid();
+        $setup->save();
+        $id = $setup->primary_key;
+
+        SimpleActual::flushStaticEntries();
+        $object = SimpleActual::getById($id);  // fresh load via fillByStatic → baseline = READY
+        $this->assertFalse($object->isDirty());
+
+        // Change state and save — baseline is NOT reset by save()
+        $object->state = SimpleActual::STATE_GO;
+        $object->save();
+
+        $this->assertTrue($object->isDirty(SimpleActual::COLUMN_DEFAULT_VALUE));
+        $this->assertArrayHasKey(SimpleActual::COLUMN_DEFAULT_VALUE, $object->getChanges());
+        $this->assertEquals('READY', $object->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old']);
+        $this->assertEquals('GO', $object->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
+        $this->assertContains(SimpleActual::COLUMN_DEFAULT_VALUE, $object->getChangedFields());
+
+        // A second save also keeps the original baseline — 'old' stays READY
+        $object->state = SimpleActual::STATE_SET;
+        $object->save();
+        $this->assertEquals('READY', $object->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old'], 'Baseline should stay at initial DB load, not reset on each save');
+        $this->assertEquals('SET', $object->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
+    }
+
+    public function testIsDirtyFieldTargeted()
+    {
+        // Create a fresh object with known state so tests are deterministic
+        $object = new SimpleActual();
+        $object->unique = uniqid();
+        $object->save();
+        $id = $object->primary_key;
+
+        // Reload fresh from DB so baseline = DB values (state='READY', unique=saved value)
+        SimpleActual::flushStaticEntries();
+        $object = SimpleActual::getById($id);
+
+        // Modify only unique
+        $object->unique = uniqid();
+
+        // ANY of the listed fields: unique changed, state did not
+        $this->assertTrue($object->isDirty([SimpleActual::COLUMN_UNIQUE, SimpleActual::COLUMN_DEFAULT_VALUE]), 'isDirty([unique, state]) should be true because unique changed');
+        $this->assertFalse($object->isDirty(SimpleActual::COLUMN_DEFAULT_VALUE), 'isDirty(state) should be false because only unique changed');
+        $this->assertFalse($object->isDirty([SimpleActual::COLUMN_DEFAULT_VALUE]), 'isDirty([state]) should be false');
+    }
+
+    public function testTimestampExcluded()
+    {
+        $object = new SimpleActual();
+        $object->unique = uniqid();
+        $object->save();
+
+        // Flush and reload so baseline = DB values (not constructor defaults)
+        SimpleActual::flushStaticEntries();
+        $object = SimpleActual::getById($object->primary_key);
+
+        // Auto-managed timestamp columns must never appear in changes
+        $this->assertNotContains(SimpleActual::COLUMN_CREATED, $object->getChangedFields());
+        $this->assertNotContains(SimpleActual::COLUMN_UPDATED, $object->getChangedFields());
+
+        // Even after bumping the ON UPDATE column via a save, timestamps stay excluded
+        $object->state = SimpleActual::STATE_SET;
+        $object->save();
+        $this->assertArrayNotHasKey(SimpleActual::COLUMN_CREATED, $object->getChanges());
+        $this->assertArrayNotHasKey(SimpleActual::COLUMN_UPDATED, $object->getChanges());
+        $this->assertArrayHasKey(SimpleActual::COLUMN_DEFAULT_VALUE, $object->getChanges());
+    }
+
+    public function testBooleanNoFalseDirty()
+    {
+        // Create and reload an object so baseline = DB-string '0' for is_it_on
+        $object = new SimpleActual();
+        $object->unique = uniqid();
+        $object->save();
+        $id = $object->primary_key;
+
+        SimpleActual::flushStaticEntries();
+        $object = SimpleActual::getById($id);   // fresh load: is_it_on baseline = '0'
+
+        // Setting PHP false against DB-stored '0' should not count as a change
+        $object->is_it_on = false;
+        $this->assertFalse($object->isDirty(SimpleActual::COLUMN_IS_IT_ON), 'Setting is_it_on=false against stored "0" should not trigger dirty');
+
+        // But setting true should be a change
+        $object->is_it_on = true;
+        $this->assertTrue($object->isDirty(SimpleActual::COLUMN_IS_IT_ON), 'Setting is_it_on=true against stored "0" should be dirty');
+    }
+
+    public function testCloneResetsTracking()
+    {
+        // Load a known-state object fresh from DB
+        $setup = new SimpleActual();
+        $setup->unique = uniqid();
+        $setup->save();
+        $id = $setup->primary_key;
+
+        SimpleActual::flushStaticEntries();
+        $object1 = SimpleActual::getById($id);   // baseline = READY (DB value)
+
+        // Change state on original — object1 is now dirty (READY → GO)
+        $object1->state = SimpleActual::STATE_GO;
+        $this->assertEquals('READY', $object1->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old']);
+
+        sleep(1);
+
+        $object2 = clone $object1;
+
+        // Clone re-baselines from its own current values (GO) → no changes yet
+        $this->assertEquals([], $object2->getChanges(), 'Cloned object should have an empty change set relative to its own baseline (GO)');
+
+        // Modifying the clone is independent of the original
+        $object2->state = SimpleActual::STATE_SET;
+        $this->assertTrue($object2->isDirty(), 'Clone should be dirty after modification');
+        // Original still reflects READY → GO
+        $this->assertEquals('READY', $object1->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old']);
+        $this->assertEquals('GO', $object1->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
+
+        // Saving the clone does not affect the original's baseline or changes
+        $object2->unique = uniqid();
+        $object2->save();
+        $this->assertTrue($object2->isDirty(SimpleActual::COLUMN_DEFAULT_VALUE), 'Clone should show its own state change after save');
+        $this->assertEquals('GO', $object2->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old'], 'Clone baseline is GO (state at clone time)');
+        $this->assertEquals('SET', $object2->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
+        $this->assertEquals('READY', $object1->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old'], 'Original baseline unchanged by clone save');
+    }
+
+    public function testChangeTrackingMemcacheRoundtrip()
+    {
+        $object1 = new SimpleActual();
+        $object1->unique = uniqid();
+        $object1->state = SimpleActual::STATE_SET;
+        $object1->save();
+        $id = $object1->primary_key;
+
+        // Flush static cache so getById falls back to memcache
+        SimpleActual::flushStaticEntries();
+
+        // Object is rehydrated from memcache — baseline resets to the deserialized (post-save) state
+        $object2 = SimpleActual::getById($id);
+
+        // Memcache deserialization starts a fresh baseline; no accumulated changes from the prior request
+        $this->assertFalse($object2->isDirty(), 'Object rehydrated from memcache should start with a clean baseline');
+        $this->assertEquals([], $object2->getChanges());
+
+        // Modifications made after deserialization are tracked from the fresh baseline
+        $object2->state = SimpleActual::STATE_GO;
+        $this->assertTrue($object2->isDirty(SimpleActual::COLUMN_DEFAULT_VALUE));
+        $this->assertEquals('SET', $object2->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['old'], 'Baseline is the post-save state from memcache');
+        $this->assertEquals('GO', $object2->getChanges()[SimpleActual::COLUMN_DEFAULT_VALUE]['new']);
     }
 }

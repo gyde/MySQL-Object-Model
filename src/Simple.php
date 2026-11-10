@@ -147,7 +147,7 @@ class Simple extends Base
      * Will throw exception on all failures, if no exception, then object is deleted
      * @throws BaseException
      */
-    public function delete()
+    public function delete($metaData = null)
     {
         $keyname = static::COLUMN_PRIMARY_KEY;
         $id = $this->$keyname;
@@ -189,8 +189,13 @@ class Simple extends Base
                 continue;
             }
 
-            if (static::isFieldProtected($field['Field']) && array_key_exists($name, $this->__mbOriginalValues) && $this->$name === $this->__mbOriginalValues[$name]) {
-                continue;
+            if (static::isFieldProtected($field['Field'])) {
+                if ($this->isNew() && $this->$name === null) {
+                    continue;
+                }
+                if (array_key_exists($name, $this->__mbOriginalValues) && $this->$name === $this->__mbOriginalValues[$name]) {
+                    continue;
+                }
             }
 
             $values[] = $this->escapeObjectPair($field['Field'], $field['Type']);
@@ -251,5 +256,7 @@ class Simple extends Base
         $this->__mbNewObject = true;
         $this->__mbSerializeTimestamp = 0;
         $this->__mbStaticCacheTimestamp = 0;
+        // Re-baseline so the clone tracks independently from its own current values
+        $this->snapshotChangeOriginals();
     }
 }

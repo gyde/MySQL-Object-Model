@@ -14,11 +14,13 @@ abstract class Base
 
     public const USE_STATIC_CACHE = false;
     public const USE_MEMCACHE = false;
+    public const USE_CHANGE_TRACKING = false;
 
     public const CLASS_REVISION = 0;
     public const CLASS_DESCRIPTION_SELECTOR = '__mbDescription';
 
-    public const VERBOSE_SQL = false;
+    public const LOG_QUERIES = false;
+    public const LOG_QUERY_ERRORS = false;
     public const VERBOSE_STATIC_CACHE = false;
     public const VERBOSE_MEMCACHE = false;
 
@@ -67,6 +69,15 @@ abstract class Base
       * @var array<string, mixed>
       */
     protected $__mbOriginalValues = array();
+
+    /**
+      * Baseline snapshot of all tracked (non-protected) column values
+      * Populated on construction and after fresh DB loads (fillByStatic)
+      * Intentionally NOT reset after save() so changes accumulate across the object's lifetime
+      * Only populated when USE_CHANGE_TRACKING = true
+      * @var array<string, mixed>
+      */
+    protected $__mbChangeOriginals = array();
 
     /**
       * Defines database names, this will override usage of constant DB
@@ -172,6 +183,8 @@ abstract class Base
                 $this->{$field['Field']} = null;
             }
         }
+
+        $this->snapshotChangeOriginals();
     }
 
     /**
@@ -196,7 +209,7 @@ abstract class Base
       * If delete fails BaseException should be thrown
       * @throws BaseException
       */
-    abstract public function delete();
+    abstract public function delete($metaData = null);
 
     /**
       * Get a rows unique identifier, e.g. primary key, or a compound key
@@ -406,6 +419,7 @@ abstract class Base
         $this->fill($row);
         $this->__mbConnection = self::getConnection();
         $this->__mbMemcache = self::getMemcache();
+        $this->snapshotChangeOriginals();
     }
 
     /**
@@ -549,6 +563,74 @@ abstract class Base
     }
 
     /**
+      * Snapshot the current value of every tracked (non-protected) column into $__mbChangeOriginals
+      * Called after the constructor and after fresh DB loads via fillByStatic()
+      * Intentionally NOT called from fillByObject() so the baseline persists across save() calls
+      * No-op when USE_CHANGE_TRACKING is false
+      */
+    protected function snapshotChangeOriginals(): void
+    {
+        if (!static::useChangeTracking()) {
+            return;
+        }
+
+        $this->__mbChangeOriginals = array();
+        foreach (static::describe() as $field) {
+            $name = $field['Field'];
+            if (static::isFieldProtected($name)) {
+                continue;
+            }
+            if (!property_exists($this, $name)) {
+                continue;
+            }
+            $this->__mbChangeOriginals[$name] = $this->$name;
+        }
+    }
+
+    /**
+      * Compute the change set between current in-memory values and the last snapshot
+      * Returns an array of field => ['old' => ..., 'new' => ...] for every tracked field
+      * that has changed since the baseline was taken
+      * @return array<string, array{old: mixed, new: mixed}>
+      */
+    protected function computeChanges(): array
+    {
+        $changes = array();
+        foreach ($this->__mbChangeOriginals as $name => $original) {
+            if (!property_exists($this, $name)) {
+                continue;
+            }
+            $current = $this->$name;
+            if (!static::valuesEqual($original, $current)) {
+                $changes[$name] = array('old' => $original, 'new' => $current);
+            }
+        }
+
+        return $changes;
+    }
+
+    /**
+      * Normalised equality check for change tracking
+      * Handles the type mismatch between PDO string returns / constructor string defaults
+      * and user-assigned PHP values (int, bool, etc.)
+      * Deliberately separate from the strict === used on the protected-field path
+      * @param mixed $a
+      * @param mixed $b
+      * @return bool
+      */
+    private static function valuesEqual($a, $b): bool
+    {
+        if ($a === null || $b === null) {
+            return $a === $b;
+        }
+        // (string)false === '' which would misfire on BOOLEAN columns stored as '0'/'1'
+        if (is_bool($a) || is_bool($b)) {
+            return (bool)$a === (bool)$b;
+        }
+        return (string)$a === (string)$b;
+    }
+
+    /**
      * Return if $value is valid with respect to constants with $prefix
      * @param string $preFix
      * @param mixed $value
@@ -629,9 +711,7 @@ abstract class Base
       */
     protected static function query($connection, $sql, $buffered = true)
     {
-        if (static::VERBOSE_SQL) {
-            error_log($sql);
-        }
+        static::writeLog(static::LOG_QUERIES, $sql);
 
         if (!$buffered) {
             $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
@@ -640,6 +720,7 @@ abstract class Base
         try {
             $result = $connection->query($sql, \PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
+            static::writeLog(static::LOG_QUERY_ERRORS, $sql . ' — ' . $e->getMessage());
             throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         } finally {
             $connection->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
@@ -678,13 +759,12 @@ abstract class Base
       */
     protected static function prepare($connection, $sql)
     {
-        if (static::VERBOSE_SQL) {
-            error_log($sql);
-        }
+        static::writeLog(static::LOG_QUERIES, $sql);
 
         try {
             $result = $connection->prepare($sql);
         } catch (\PDOException $e) {
+            static::writeLog(static::LOG_QUERY_ERRORS, $sql . ' — ' . $e->getMessage());
             throw new MySQLException($sql, $e->getMessage(), $e->errorInfo[1]);
         }
 
@@ -838,6 +918,62 @@ abstract class Base
     public function isNew()
     {
         return $this->__mbNewObject;
+    }
+
+    /**
+      * Returns true if any tracked (non-protected) column has changed since the object
+      * was first constructed or loaded from the database
+      *
+      * $fields = null       — true if anything changed
+      * $fields = 'col'      — true if that column changed
+      * $fields = ['a', 'b'] — true if ANY of those columns changed
+      *
+      * Always returns false when USE_CHANGE_TRACKING is false on the extending class
+      *
+      * @param string|string[]|null $fields
+      * @return bool
+      */
+    public function isDirty($fields = null): bool
+    {
+        $changes = $this->computeChanges();
+
+        if (empty($changes)) {
+            return false;
+        }
+
+        if ($fields === null) {
+            return true;
+        }
+
+        foreach ((array)$fields as $field) {
+            if (array_key_exists($field, $changes)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+      * Returns all tracked columns that have changed since the object was first
+      * constructed or loaded from the database
+      * Keyed by column name; each value is ['old' => ..., 'new' => ...]
+      * Auto-managed timestamp columns (CURRENT_TIMESTAMP / ON UPDATE) are excluded
+      * @return array<string, array{old: mixed, new: mixed}>
+      */
+    public function getChanges(): array
+    {
+        return $this->computeChanges();
+    }
+
+    /**
+      * Returns the names of all columns that have changed since the object was first
+      * constructed or loaded from the database
+      * @return string[]
+      */
+    public function getChangedFields(): array
+    {
+        return array_keys($this->computeChanges());
     }
 
     /**
@@ -1091,6 +1227,35 @@ abstract class Base
     }
 
     /**
+      * Checks if the extending class has change tracking enabled
+      * @return bool
+      */
+    protected static function useChangeTracking()
+    {
+        return (bool)static::USE_CHANGE_TRACKING;
+    }
+
+    /**
+      * Write a log message to the destination specified by a LOG_* constant.
+      * false   → no-op
+      * true    → error_log()
+      * string  → append to that file path via error_log(..., 3, $destination)
+      * @param false|bool|string $destination
+      * @param string $message
+      */
+    private static function writeLog($destination, string $message): void
+    {
+        if ($destination === false) {
+            return;
+        }
+        if ($destination === true) {
+            error_log($message);
+            return;
+        }
+        error_log($message . PHP_EOL, 3, $destination);
+    }
+
+    /**
       * Checks if the extending class has needed info to use Base
       * @param string $classname classname of the extending class
       */
@@ -1153,6 +1318,8 @@ abstract class Base
         $data['__mbNewObject'] = $this->__mbNewObject;
         $data['__mbSelector'] = $this->__mbSelector;
         $data['__mbOriginalValues'] = $this->__mbOriginalValues;
+        // __mbChangeOriginals is session-scoped and intentionally not serialized;
+        // __unserialize() re-baselines from the deserialized column values instead
 
         return $data;
     }
@@ -1174,5 +1341,7 @@ abstract class Base
         $this->__mbSelector = $data['__mbSelector'];
         $this->__mbOriginalValues = $data['__mbOriginalValues'];
         $this->__mbMemcache = self::getMemcache();
+        // Re-baseline from the deserialized column values so the new request starts clean
+        $this->snapshotChangeOriginals();
     }
 }

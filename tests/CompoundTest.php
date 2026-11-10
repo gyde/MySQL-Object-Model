@@ -223,4 +223,40 @@ class CompoundTest extends \PHPUnit\Framework\TestCase
         $object1->key3 = '';
         $object1->save();
     }
+
+    public function testCompoundDirtyAndChanges()
+    {
+        // Load a fresh compound object from DB so baseline = DB values
+        CompoundActual::flushStaticEntries();
+        $objects = CompoundActual::getAll();
+        $object = reset($objects);
+
+        // Fresh load: no changes
+        $this->assertFalse($object->isDirty(), 'Freshly loaded compound object should not be dirty');
+        $this->assertNotContains(CompoundActual::COLUMN_KEY1, $object->getChangedFields());
+        $this->assertNotContains(CompoundActual::COLUMN_CREATED, $object->getChangedFields());
+        $this->assertNotContains(CompoundActual::COLUMN_UPDATED, $object->getChangedFields());
+
+        // Modify a non-key, non-timestamp field
+        $object->state = CompoundActual::STATE_SET;
+        $this->assertTrue($object->isDirty(), 'Compound object should be dirty after changing state');
+        $this->assertTrue($object->isDirty(CompoundActual::COLUMN_DEFAULT_VALUE));
+        $this->assertNotContains(CompoundActual::COLUMN_CREATED, $object->getChangedFields());
+        $this->assertNotContains(CompoundActual::COLUMN_UPDATED, $object->getChangedFields());
+
+        $object->save();
+
+        // Changes persist after save — baseline was NOT reset
+        $this->assertTrue($object->isDirty());
+        $this->assertArrayHasKey(CompoundActual::COLUMN_DEFAULT_VALUE, $object->getChanges());
+        $this->assertEquals('READY', $object->getChanges()[CompoundActual::COLUMN_DEFAULT_VALUE]['old']);
+        $this->assertEquals('SET', $object->getChanges()[CompoundActual::COLUMN_DEFAULT_VALUE]['new']);
+
+        // Compound keys and timestamps never appear in changes
+        $this->assertArrayNotHasKey(CompoundActual::COLUMN_KEY1, $object->getChanges());
+        $this->assertArrayNotHasKey(CompoundActual::COLUMN_KEY2, $object->getChanges());
+        $this->assertArrayNotHasKey(CompoundActual::COLUMN_KEY3, $object->getChanges());
+        $this->assertArrayNotHasKey(CompoundActual::COLUMN_CREATED, $object->getChanges());
+        $this->assertArrayNotHasKey(CompoundActual::COLUMN_UPDATED, $object->getChanges());
+    }
 }

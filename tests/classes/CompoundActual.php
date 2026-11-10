@@ -8,6 +8,7 @@ class CompoundActual extends \Gyde\Mom\Compound
     public const TABLE = 'mom_compound_test';
 
     public const USE_STATIC_CACHE = true;
+    public const USE_CHANGE_TRACKING = true;
 
     public const COLUMN_COMPOUND_KEYS = 'key1,key2,key3';
     public const COLUMN_KEY1 = 'key1';

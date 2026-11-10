@@ -13,7 +13,7 @@ class Util
     public static function getMemcache()
     {
         $memcache = new \Memcached();
-        $memcache->addServer($_SERVER['MEMCACHE_HOST'], 11211);
+        $memcache->addServer(getenv('MEMCACHE_HOST'), 11211);
         return $memcache;
     }
 
@@ -23,7 +23,7 @@ class Util
       */
     public static function getConnection()
     {
-        $pdo = new \PDO('mysql:host=' . $_SERVER['MYSQL_HOST'], $_SERVER['MYSQL_USERNAME'], $_SERVER['MYSQL_PASSWD']);
+        $pdo = new \PDO('mysql:host=' . getenv('DB_HOST'), getenv('DB_USER'), getenv('DB_PASS'));
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         return $pdo;
     }

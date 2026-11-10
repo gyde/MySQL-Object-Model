@@ -1,0 +1,33 @@
+name: mom-phpunit
+
+services:
+  cli:
+    hostname: cli
+    build:
+      context: .
+    volumes:
+      - "../:/srv/mom/"
+#    entrypoint: /bin/bash
+    env_file: .env
+    tty: true
+    stdin_open: true
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    hostname: db
+    image: mariadb
+    restart: always
+    volumes:
+      - ./docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MARIADB_ROOT_PASSWORD: junction-brewery-outsider
+      #MARIADB_DATABASE: 
+      #MARIADB_USER: dog
+      #MARIADB_PASSWORD: barmaid-chest-serpent
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
